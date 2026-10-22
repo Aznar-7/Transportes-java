@@ -1,0 +1,46 @@
+{
+  "realm": "flety",
+  "displayName": "Flety",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 1800,
+  "roles": {
+    "realm": [
+      {
+        "name": "TRANSPORTISTA",
+        "description": "Propietario-conductor que publica retornos y se propone para cargas"
+      },
+      {
+        "name": "DADOR",
+        "description": "Empresa dadora que publica cargas y elige propuestas"
+      },
+      {
+        "name": "OPERADOR",
+        "description": "Verifica unidades, atiende disputas y administra el sistema"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "flety-test",
+      "name": "Cliente de pruebas de Flety",
+      "description": "Cliente público para pedir tokens con curl, Postman o Swagger",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:8085/*"
+      ],
+      "webOrigins": [
+        "+"
+      ]
+    }
+  ]
+}
