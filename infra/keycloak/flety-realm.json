@@ -42,5 +42,43 @@
         "+"
       ]
     }
+  ],
+  "users": [
+    {
+      "username": "transportista1",
+      "enabled": true,
+      "email": "transportista1@flety.test",
+      "emailVerified": true,
+      "firstName": "Transportista",
+      "lastName": "Uno",
+      "credentials": [
+        { "type": "password", "value": "transportista1", "temporary": false }
+      ],
+      "realmRoles": ["TRANSPORTISTA"]
+    },
+    {
+      "username": "dador1",
+      "enabled": true,
+      "email": "dador1@flety.test",
+      "emailVerified": true,
+      "firstName": "Dador",
+      "lastName": "Uno",
+      "credentials": [
+        { "type": "password", "value": "dador1", "temporary": false }
+      ],
+      "realmRoles": ["DADOR"]
+    },
+    {
+      "username": "operador1",
+      "enabled": true,
+      "email": "operador1@flety.test",
+      "emailVerified": true,
+      "firstName": "Operador",
+      "lastName": "Uno",
+      "credentials": [
+        { "type": "password", "value": "operador1", "temporary": false }
+      ],
+      "realmRoles": ["OPERADOR"]
+    }
   ]
 }
