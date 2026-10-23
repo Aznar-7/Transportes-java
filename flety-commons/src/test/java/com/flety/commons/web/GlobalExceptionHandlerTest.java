@@ -5,12 +5,18 @@ import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.excepciones.ReglaNegocioException;
 import com.flety.commons.excepciones.ServicioExternoException;
 import com.flety.commons.excepciones.ServicioNoDisponibleException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +24,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
+
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -89,6 +99,47 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.errores.pesoToneladas").exists());
     }
 
+    @Test
+    void indiceUnicoVioladoDevuelve409SinMostrarElSql() throws Exception {
+        mockMvc.perform(get("/duplicado"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value(not(containsString("uk_transportista_cuit"))));
+    }
+
+    @Test
+    void bloqueoOptimistaDeVersionDevuelve409() throws Exception {
+        mockMvc.perform(get("/version"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+    }
+
+    @Test
+    void parametroInvalidoDevuelve400ConElParametro() throws Exception {
+        mockMvc.perform(get("/parametro"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.errores.pesoToneladas").exists());
+    }
+
+    @Test
+    void errorInesperadoDevuelve500ComoProblemDetailSinElMensajeInterno() throws Exception {
+        mockMvc.perform(get("/inesperado"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.detail").value(not(containsString("dador"))));
+    }
+
+    @Test
+    void elHandlerGenericoNoTapaLosErroresDeSpring() throws Exception {
+        mockMvc.perform(post("/validar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ esto no es json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+    }
+
     record PedidoDePrueba(@NotBlank String nombre, @Positive double pesoToneladas) {
     }
 
@@ -122,6 +173,29 @@ class GlobalExceptionHandlerTest {
 
         @PostMapping("/validar")
         void validar(@Valid @RequestBody PedidoDePrueba pedido) {
+        }
+
+        @GetMapping("/duplicado")
+        void duplicado() {
+            throw new DataIntegrityViolationException("duplicate key value violates unique constraint \"uk_transportista_cuit\"");
+        }
+
+        @GetMapping("/version")
+        void version() {
+            throw new ObjectOptimisticLockingFailureException("Carga", 7L);
+        }
+
+        @GetMapping("/parametro")
+        void parametro() {
+            Validator validador = Validation.buildDefaultValidatorFactory().getValidator();
+            Set<ConstraintViolation<PedidoDePrueba>> errores = validador.validate(new PedidoDePrueba("ok", -1));
+            throw new ConstraintViolationException(errores);
+        }
+
+        @GetMapping("/inesperado")
+        void inesperado() {
+            String dador = null;
+            dador.length();
         }
     }
 }
