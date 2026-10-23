@@ -8,6 +8,8 @@ import com.flety.commons.excepciones.ServicioNoDisponibleException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -40,6 +42,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConflictoException.class)
     public ProblemDetail conflicto(ConflictoException ex) {
         return problema(HttpStatus.CONFLICT, "Conflicto con el estado actual", ex.getMessage());
+    }
+
+    /**
+     * La base rechazó el cambio por una restricción, por ejemplo un índice único (CUIT repetido, RN-14).
+     * No se devuelve el mensaje de la base porque trae detalles internos del esquema.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail integridadDeDatos(DataIntegrityViolationException ex) {
+        log.info("Restricción de la base violada: {}", ex.getMostSpecificCause().getMessage());
+        return problema(HttpStatus.CONFLICT, "Conflicto con el estado actual",
+                "El cambio choca con un dato que ya existe");
+    }
+
+    /** Dos pedidos modificaron el mismo registro a la vez y @Version detectó que este llegó segundo. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ProblemDetail bloqueoOptimista(OptimisticLockingFailureException ex) {
+        return problema(HttpStatus.CONFLICT, "Conflicto con el estado actual",
+                "Otro pedido modificó este recurso al mismo tiempo; volvé a intentarlo");
     }
 
     @ExceptionHandler(ReglaNegocioException.class)
