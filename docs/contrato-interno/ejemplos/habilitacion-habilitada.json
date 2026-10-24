@@ -1,0 +1,13 @@
+{
+  "unidadId": 12,
+  "habilitada": true,
+  "motivos": [],
+  "dominio": "AB123CD",
+  "tipoCarroceria": "SIDER",
+  "capacidadToneladas": 28.0,
+  "capacidadM3": 90.0,
+  "sumaAseguradaCarga": 50000000.00,
+  "transportistaId": 3,
+  "transportistaRazonSocial": "Transportes Pérez SRL",
+  "transportistaTelefono": "+5493514445566"
+}

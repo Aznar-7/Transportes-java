@@ -1,0 +1,22 @@
+{
+  "id": 7,
+  "transportistaId": 3,
+  "unidadId": 12,
+  "estado": "PUBLICADO",
+  "origen": { "provincia": "Santa Fe", "localidad": "Rosario", "lat": -32.9468, "lng": -60.6393 },
+  "destino": { "provincia": "Córdoba", "localidad": "Córdoba", "lat": -31.4201, "lng": -64.1888 },
+  "salidaDesde": "2026-11-02T09:00:00Z",
+  "salidaHasta": "2026-11-02T21:00:00Z",
+  "desvioMaximoKm": 30.0,
+  "rutaDistanciaKm": 401.5,
+  "rutaDuracionMin": 290.0,
+  "rutaPuntos": [
+    { "lat": -32.9468, "lng": -60.6393 },
+    { "lat": -32.4075, "lng": -63.2402 },
+    { "lat": -31.4201, "lng": -64.1888 }
+  ],
+  "rutaAproximada": false,
+  "tipoCarroceria": "SIDER",
+  "capacidadToneladas": 28.0,
+  "capacidadM3": 90.0
+}
