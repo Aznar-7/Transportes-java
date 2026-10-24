@@ -1,0 +1,6 @@
+{
+  "title": "Recurso no encontrado",
+  "status": 404,
+  "detail": "Retorno 99 no existe",
+  "instance": "/internal/retornos/99"
+}

@@ -1,0 +1,21 @@
+{
+  "id": 8,
+  "transportistaId": 3,
+  "unidadId": 12,
+  "estado": "PUBLICADO",
+  "origen": { "provincia": "Mendoza", "localidad": "Mendoza", "lat": -32.8895, "lng": -68.8458 },
+  "destino": { "provincia": "Córdoba", "localidad": "Córdoba", "lat": -31.4201, "lng": -64.1888 },
+  "salidaDesde": "2026-11-03T06:00:00Z",
+  "salidaHasta": "2026-11-03T18:00:00Z",
+  "desvioMaximoKm": 30.0,
+  "rutaDistanciaKm": 470.2,
+  "rutaDuracionMin": 0.0,
+  "rutaPuntos": [
+    { "lat": -32.8895, "lng": -68.8458 },
+    { "lat": -31.4201, "lng": -64.1888 }
+  ],
+  "rutaAproximada": true,
+  "tipoCarroceria": "SIDER",
+  "capacidadToneladas": 28.0,
+  "capacidadM3": 90.0
+}
