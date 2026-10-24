@@ -1,0 +1,16 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: cargas-service
+  # Cada valor se puede pisar con una variable de entorno (en Docker las pasa el compose).
+  # La contraseña no tiene valor por defecto a propósito: nunca va en el repo.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cargas_db}
+    username: ${DB_USER:cargas}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
