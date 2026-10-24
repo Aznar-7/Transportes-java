@@ -8,6 +8,8 @@ import com.flety.commons.excepciones.ServicioNoDisponibleException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -42,6 +44,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problema(HttpStatus.CONFLICT, "Conflicto con el estado actual", ex.getMessage());
     }
 
+    /**
+     * La base rechazó el cambio por una restricción, por ejemplo un índice único (CUIT repetido, RN-14).
+     * No se devuelve el mensaje de la base porque trae detalles internos del esquema.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail integridadDeDatos(DataIntegrityViolationException ex) {
+        log.info("Restricción de la base violada: {}", ex.getMostSpecificCause().getMessage());
+        return problema(HttpStatus.CONFLICT, "Conflicto con el estado actual",
+                "El cambio choca con un dato que ya existe");
+    }
+
+    /** Dos pedidos modificaron el mismo registro a la vez y @Version detectó que este llegó segundo. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ProblemDetail bloqueoOptimista(OptimisticLockingFailureException ex) {
+        return problema(HttpStatus.CONFLICT, "Conflicto con el estado actual",
+                "Otro pedido modificó este recurso al mismo tiempo; volvé a intentarlo");
+    }
+
     @ExceptionHandler(ReglaNegocioException.class)
     public ProblemDetail reglaNegocio(ReglaNegocioException ex) {
         return problema(HttpStatus.UNPROCESSABLE_ENTITY, "Regla de negocio incumplida", ex.getMessage());
@@ -67,6 +87,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problema = problema(HttpStatus.BAD_REQUEST, "Datos inválidos", "Hay parámetros con errores");
         problema.setProperty("errores", errores);
         return problema;
+    }
+
+    /**
+     * Red de seguridad para lo que nadie previó (un NullPointerException, un bug): 500, también como ProblemDetail.
+     * El detalle real queda en el log y no se le muestra al cliente.
+     * Las excepciones más específicas tienen su propio handler, y Spring siempre elige el más específico.
+     * Ojo FLY-18: cuando entre Spring Security, AccessDeniedException necesita su handler (403) o caería acá como 500.
+     */
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail errorInesperado(Exception ex) {
+        log.error("Error inesperado", ex);
+        return problema(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno",
+                "Ocurrió un error inesperado; si sigue pasando, avisá al equipo de Flety");
     }
 
     /** Validaciones del cuerpo con @Valid: responde 400 y agrega qué campo falló y por qué. */
