@@ -14,7 +14,7 @@
 
     <groupId>com.flety</groupId>
     <artifactId>flety-commons</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <packaging>jar</packaging>
     <name>flety-commons</name>
     <description>Librería común de Flety: excepciones, manejo de errores, contrato interno y clientes externos</description>
