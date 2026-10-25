@@ -14,3 +14,8 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+
+flety:
+  transporte:
+    # En Docker: http://transporte-service:8091. Los timeouts tienen valor por defecto (2 s y 5 s).
+    url: ${TRANSPORTE_URL:http://localhost:8091}

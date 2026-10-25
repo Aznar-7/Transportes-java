@@ -9,7 +9,7 @@ import java.time.Instant;
 
 /**
  * Lo que cargas-service le pregunta a transporte-service (sección 5 del diseño).
- * La implementación real con RestClient llega en FLY-21; hasta entonces se programa y se prueba con TransporteClientFake.
+ * La implementación real es TransporteClientHttp (RestClient, FLY-21); los tests usan TransporteClientFake.
  * Falla cerrada: si transporte no responde se lanza ServicioNoDisponibleException (503) y no se crea ni se confirma nada.
  */
 public interface TransporteClient {
