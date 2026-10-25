@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -79,6 +81,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problema(HttpStatus.SERVICE_UNAVAILABLE, "Servicio externo no disponible", ex.getMessage());
     }
 
+    /**
+     * Sin token o con un token inválido (FLY-18). Llega acá desde ErroresDeSeguridad, o desde UsuarioActual si
+     * un endpoint pide el usuario y no hay. El header WWW-Authenticate le avisa al cliente que espera un Bearer.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ProblemDetail> noAutenticado(AuthenticationException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .body(problema(HttpStatus.UNAUTHORIZED, "No autenticado",
+                        "Falta el token o no es válido; pedí uno nuevo a Keycloak"));
+    }
+
+    /** Token válido pero sin el rol que pide el endpoint, por ejemplo un DADOR en un @PreAuthorize de TRANSPORTISTA. */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail sinPermiso(AccessDeniedException ex) {
+        return problema(HttpStatus.FORBIDDEN, "Sin permiso", "Tu rol no te permite hacer esto");
+    }
+
     /** Validaciones sobre parámetros sueltos (@RequestParam, @PathVariable) con @Validated en el controller. */
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail validacionDeParametros(ConstraintViolationException ex) {
@@ -93,7 +113,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      * Red de seguridad para lo que nadie previó (un NullPointerException, un bug): 500, también como ProblemDetail.
      * El detalle real queda en el log y no se le muestra al cliente.
      * Las excepciones más específicas tienen su propio handler, y Spring siempre elige el más específico.
-     * Ojo FLY-18: cuando entre Spring Security, AccessDeniedException necesita su handler (403) o caería acá como 500.
      */
     @ExceptionHandler(Exception.class)
     public ProblemDetail errorInesperado(Exception ex) {
