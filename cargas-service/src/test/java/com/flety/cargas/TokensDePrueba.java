@@ -22,6 +22,8 @@ public class TokensDePrueba {
     public static final String TRANSPORTISTA = "Bearer token-transportista1";
     /** Transportista con rol válido que no participa del viaje: el caso del 403 por dueño. */
     public static final String TERCERO = "Bearer token-transportista2";
+    /** Otro dador: tampoco es parte de los viajes de dador1. */
+    public static final String OTRO_DADOR = "Bearer token-dador2";
     public static final String OPERADOR = "Bearer token-operador1";
 
     @Bean
@@ -30,6 +32,7 @@ public class TokensDePrueba {
             case "token-dador1" -> jwt(token, "sub-dador1", "DADOR");
             case "token-transportista1" -> jwt(token, "sub-transportista1", "TRANSPORTISTA");
             case "token-transportista2" -> jwt(token, "sub-transportista2", "TRANSPORTISTA");
+            case "token-dador2" -> jwt(token, "sub-dador2", "DADOR");
             case "token-operador1" -> jwt(token, "sub-operador1", "OPERADOR");
             default -> throw new BadJwtException("Firma inválida");
         };
