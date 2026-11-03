@@ -44,6 +44,7 @@ class ViajeDeTercerosTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.title").value("Sin permiso"))
+                .andExpect(jsonPath("$.detail").value("No sos parte de este viaje"))
                 // El 403 no filtra nada del viaje: ni contactos ni línea de tiempo.
                 .andExpect(jsonPath("$.contactos").doesNotExist())
                 .andExpect(jsonPath("$.lineaDeTiempo").doesNotExist());
@@ -73,7 +74,8 @@ class ViajeDeTercerosTest {
 
         // Este lo corta @PreAuthorize antes de mirar el viaje: OPERADOR no es un rol de las partes.
         mockMvc.perform(get("/api/viajes/{id}", id).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.OPERADOR))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Tu rol no te permite hacer esto"));
     }
 
     @Test

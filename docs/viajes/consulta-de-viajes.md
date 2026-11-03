@@ -50,13 +50,13 @@ curl -s http://localhost:8085/api/viajes/1 -H "Authorization: Bearer $TOKEN"
 }
 ```
 
-Un tercero recibe un ProblemDetail:
+Un tercero con rol válido recibe un ProblemDetail que dice el motivo, sin revelar quiénes son las partes:
 
 ```json
-{ "type": "about:blank", "title": "Sin permiso", "status": 403, "detail": "Tu rol no te permite hacer esto", "instance": "/api/viajes/1" }
+{ "type": "about:blank", "title": "Sin permiso", "status": 403, "detail": "No sos parte de este viaje", "instance": "/api/viajes/1" }
 ```
 
-El `detail` es el texto genérico del manejador común de flety-commons, igual para cualquier 403.
+Un usuario sin el rol (por ejemplo, un OPERADOR) recibe el mismo 403, pero con `"detail": "Tu rol no te permite hacer esto"`, porque lo corta `@PreAuthorize` antes de mirar el viaje. Los dos salen del manejador común de flety-commons: el primero con `AccesoDenegadoException` (0.3.0) y el segundo con el `AccessDeniedException` de Spring.
 
 ## Modelo
 

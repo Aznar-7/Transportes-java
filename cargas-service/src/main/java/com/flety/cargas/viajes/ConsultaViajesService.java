@@ -8,9 +8,9 @@ import com.flety.cargas.viajes.dto.ViajeDetalleDTO.ContactosDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO.EventoViajeDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO.LugarDTO;
 import com.flety.cargas.viajes.dto.ViajeResumenDTO;
+import com.flety.commons.excepciones.AccesoDenegadoException;
 import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.seguridad.UsuarioActual;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,7 +51,8 @@ public class ConsultaViajesService {
         Viaje viaje = viajes.findById(id).orElseThrow(() -> new RecursoNoEncontradoException("Viaje", id));
         String sub = usuarioActual.id();
         if (!viaje.esParte(sub)) {
-            throw new AccessDeniedException("El usuario " + sub + " no es parte del viaje " + id);
+            // El mensaje lo ve el cliente: dice el motivo sin revelar quiénes son las partes.
+            throw new AccesoDenegadoException("No sos parte de este viaje");
         }
         return detalle(viaje, sub);
     }
