@@ -4,3 +4,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  # Con esto Spring arma el JwtDecoder sin buscar a Keycloak: las claves se piden recién cuando llega un token.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:1/sin-keycloak-en-tests
