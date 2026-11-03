@@ -14,6 +14,13 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+  # flety-commons valida el JWT en cada pedido (FLY-18) con las claves públicas del realm.
+  # En Docker: http://keycloak:8080/realms/flety/protocol/openid-connect/certs (ver infra/keycloak/README.md).
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWK_SET_URI:http://localhost:8081/realms/flety/protocol/openid-connect/certs}
 
 flety:
   transporte:
