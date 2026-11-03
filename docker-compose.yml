@@ -1,0 +1,60 @@
+# Infraestructura base de Flety: Postgres y Keycloak en la red flety-net.
+# Los servicios (transporte, cargas, gateway) se suman a esta misma red.
+#
+#   cp .env.example .env
+#   docker compose up -d
+
+name: flety
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: flety-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env}
+      # Las lee init-db.sql para crear un usuario por servicio
+      TRANSPORTE_DB_PASSWORD: ${TRANSPORTE_DB_PASSWORD:?falta TRANSPORTE_DB_PASSWORD en .env}
+      CARGAS_DB_PASSWORD: ${CARGAS_DB_PASSWORD:?falta CARGAS_DB_PASSWORD en .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - flety-net
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: flety-keycloak
+    # start-dev: sin HTTPS y con base embebida, suficiente para desarrollo.
+    # --import-realm carga en cada arranque lo que haya en /opt/keycloak/data/import:
+    # el realm sale siempre del JSON del repo y los cambios hechos a mano en la consola no persisten.
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?falta KEYCLOAK_ADMIN_PASSWORD en .env}
+      # El emisor (iss) de los tokens es siempre localhost:8081, aunque el pedido
+      # llegue por la red interna (keycloak:8080). Así el token vale igual desde
+      # la máquina y desde los contenedores.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./infra/keycloak/flety-realm.json:/opt/keycloak/data/import/flety-realm.json:ro
+    networks:
+      - flety-net
+
+volumes:
+  postgres-data:
+
+networks:
+  flety-net:
+    name: flety-net
