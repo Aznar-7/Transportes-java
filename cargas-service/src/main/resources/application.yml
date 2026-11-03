@@ -14,6 +14,13 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+    # Primero Hibernate crea las tablas y después corre schema-postgresql.sql (el trigger de evento_viaje).
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+      platform: postgresql
+      separator: "@@"
   # flety-commons valida el JWT en cada pedido (FLY-18) con las claves públicas del realm.
   # En Docker: http://keycloak:8080/realms/flety/protocol/openid-connect/certs (ver infra/keycloak/README.md).
   security:

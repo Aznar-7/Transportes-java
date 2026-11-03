@@ -61,7 +61,9 @@ Un usuario sin el rol (por ejemplo, un OPERADOR) recibe el mismo 403, pero con `
 ## Modelo
 
 - **Viaje**: carga, propuesta, ids del transportista y la unidad, precio acordado y estado. Guarda una **copia** de los contactos y de la patente al confirmarse, porque el transportista vive en otra base y el viaje tiene que mostrar con quién se acordó, aunque después cambien sus datos.
-- **EventoViaje**: una tabla de auditoría *append-only*, con el estado anterior y el nuevo, el `sub` de quien actuó, la fecha y hora, y un detalle opcional. El estado del viaje no tiene setter: solo cambia con `Viaje.cambiarEstado`, que siempre agrega un evento. Las columnas son `updatable = false` y `@PreRemove` corta cualquier borrado.
+- **EventoViaje**: una tabla de auditoría *append-only*, con el estado anterior y el nuevo, el `sub` de quien actuó, la fecha y hora, y un detalle opcional. El estado del viaje no tiene setter: solo cambia con `Viaje.cambiarEstado`, que siempre agrega un evento. Está protegida en dos capas:
+  - **En la aplicación:** las columnas son `updatable = false` (Hibernate nunca arma un UPDATE) y `@PreRemove` corta cualquier borrado.
+  - **En la base:** `schema-postgresql.sql` crea triggers que rechazan UPDATE, DELETE y TRUNCATE, también desde SQL directo. Spring lo corre en cada arranque, después de que Hibernate crea las tablas. En los tests con H2 no corre, porque es PL/pgSQL. Para borrar datos de prueba locales, lo más simple es `docker compose down -v`.
 - **ComprobanteEntrega** y **Disputa**: quedan modeladas acá. Las usan FLY-27 (entrega) y FLY-30/31 (disputas).
 - **TipoEstadoViaje**: CONFIRMADO, CARGADO, EN_TRANSITO, ENTREGADO, CONFORMADO, EN_DISPUTA, CERRADO_CON_DISPUTA y CANCELADO. El nombre `EstadoViaje` queda reservado para la interfaz del patrón State (FLY-27).
 

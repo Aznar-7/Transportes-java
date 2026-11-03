@@ -7,6 +7,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  # schema-postgresql.sql (el trigger de evento_viaje) es PL/pgSQL y H2 no lo entiende.
+  # En los tests el append-only lo cubre la aplicación; el trigger se prueba contra el Postgres del compose.
+  sql:
+    init:
+      mode: never
   # Con esto Spring arma el JwtDecoder sin buscar a Keycloak: las claves se piden recién cuando llega un token.
   # Los tests que mandan tokens reemplazan el decoder por TokensDePrueba, así que esta URL nunca se llama.
   security:
