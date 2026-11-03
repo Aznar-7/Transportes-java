@@ -1,5 +1,10 @@
 package com.flety.cargas.viajes;
 
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * Los estados por los que pasa un viaje (sección 6 del diseño), tal como se guardan en la base.
  * <p>
@@ -33,5 +38,11 @@ public enum TipoEstadoViaje {
      */
     public boolean activo() {
         return !cerrado();
+    }
+
+    /** Los estados activos, para filtrar en la base. */
+    public static Set<TipoEstadoViaje> activos() {
+        return Arrays.stream(values()).filter(TipoEstadoViaje::activo)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(TipoEstadoViaje.class)));
     }
 }
