@@ -1,0 +1,4 @@
+# Los scripts que corren dentro de contenedores Linux van siempre con LF,
+# aunque se clonen en Windows con core.autocrlf=true.
+*.sql text eol=lf
+*.sh  text eol=lf
