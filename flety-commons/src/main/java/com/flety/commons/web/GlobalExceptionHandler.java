@@ -1,5 +1,6 @@
 package com.flety.commons.web;
 
+import com.flety.commons.excepciones.AccesoDenegadoException;
 import com.flety.commons.excepciones.ConflictoException;
 import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.excepciones.ReglaNegocioException;
@@ -97,6 +98,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail sinPermiso(AccessDeniedException ex) {
         return problema(HttpStatus.FORBIDDEN, "Sin permiso", "Tu rol no te permite hacer esto");
+    }
+
+    /** El rol alcanza pero el recurso es de otro (RN-T1): mismo 403 y título, con el motivo real como detalle. */
+    @ExceptionHandler(AccesoDenegadoException.class)
+    public ProblemDetail accesoDenegado(AccesoDenegadoException ex) {
+        return problema(HttpStatus.FORBIDDEN, "Sin permiso", ex.getMessage());
     }
 
     /** Validaciones sobre parámetros sueltos (@RequestParam, @PathVariable) con @Validated en el controller. */

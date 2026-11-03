@@ -1,0 +1,169 @@
+package com.flety.cargas.viajes;
+
+import com.flety.cargas.mercado.Carga;
+import com.flety.cargas.mercado.Propuesta;
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.OrderBy;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Version;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * El acuerdo entre un dador y un transportista para mover una carga. Nace CONFIRMADO cuando el dador acepta
+ * una propuesta (FLY-26) y avanza por sus hitos con el patrón State (FLY-27).
+ * <p>
+ * El estado no tiene setter: la única forma de cambiarlo es cambiarEstado, que siempre deja un EventoViaje.
+ * Así es imposible que un viaje cambie de estado sin que quede registrado en su línea de tiempo.
+ */
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Viaje {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /** Bloqueo optimista: si dos pedidos cambian el mismo viaje a la vez, el segundo recibe 409. */
+    @Version
+    private Long version;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "carga_id", nullable = false, updatable = false)
+    private Carga carga;
+
+    /** Una propuesta genera a lo sumo un viaje: la columna es única. */
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "propuesta_id", nullable = false, unique = true, updatable = false)
+    private Propuesta propuesta;
+
+    /**
+     * sub del dador y del transportista: con estos dos se decide quién es parte del viaje (RN-T1).
+     * Se copian de la carga y de la propuesta para no tener que cargarlas en cada consulta.
+     */
+    @Column(nullable = false, updatable = false)
+    private String dadorSub;
+
+    @Column(nullable = false, updatable = false)
+    private String transportistaSub;
+
+    /** Ids de transporte-service: solo el número, nunca una FK entre bases. */
+    @Column(nullable = false, updatable = false)
+    private Long transportistaId;
+
+    @Column(nullable = false, updatable = false)
+    private Long unidadId;
+
+    /** Patente de la unidad, copiada al confirmar para que el dador sepa qué camión espera. */
+    @Column(updatable = false)
+    private String unidadDominio;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "nombre", column = @Column(name = "transportista_nombre", updatable = false)),
+            @AttributeOverride(name = "telefono", column = @Column(name = "transportista_telefono", updatable = false))
+    })
+    private Contacto contactoTransportista;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "nombre", column = @Column(name = "dador_nombre", updatable = false)),
+            @AttributeOverride(name = "telefono", column = @Column(name = "dador_telefono", updatable = false))
+    })
+    private Contacto contactoDador;
+
+    /** El precio de la propuesta aceptada: el del dador o la contraoferta. */
+    @Column(nullable = false, updatable = false, precision = 14, scale = 2)
+    private BigDecimal precioAcordado;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoEstadoViaje estado;
+
+    /** Se completan en FLY-27 (entrega y ventana de 48 h) y FLY-30 (conformidad). */
+    private Instant entregadoEn;
+
+    private Instant ventanaConformidadHasta;
+
+    @Enumerated(EnumType.STRING)
+    private ConformadoPor conformadoPor;
+
+    @Column(nullable = false, updatable = false)
+    private Instant creadoEn;
+
+    /**
+     * La línea de tiempo. Con PERSIST, los eventos nuevos se guardan junto con el viaje; sin REMOVE ni
+     * orphanRemoval, sacar uno de la lista no lo borra de la base.
+     */
+    @OneToMany(mappedBy = "viaje", cascade = CascadeType.PERSIST)
+    @OrderBy("ocurridoEn ASC, id ASC")
+    @Getter(AccessLevel.NONE)
+    private List<EventoViaje> eventos = new ArrayList<>();
+
+    /**
+     * Crea el viaje CONFIRMADO a partir de la propuesta que eligió el dador, con su primer evento.
+     *
+     * @param actorSub sub del dador que aceptó la propuesta
+     */
+    public Viaje(Carga carga, Propuesta propuesta, String unidadDominio, Contacto contactoTransportista,
+                 Contacto contactoDador, String actorSub) {
+        this.carga = carga;
+        this.propuesta = propuesta;
+        this.dadorSub = carga.getDadorSub();
+        this.transportistaSub = propuesta.getTransportistaSub();
+        this.transportistaId = propuesta.getTransportistaId();
+        this.unidadId = propuesta.getUnidadId();
+        this.unidadDominio = unidadDominio;
+        this.contactoTransportista = contactoTransportista;
+        this.contactoDador = contactoDador;
+        this.precioAcordado = propuesta.getPrecio();
+        this.estado = TipoEstadoViaje.CONFIRMADO;
+        eventos.add(new EventoViaje(this, null, TipoEstadoViaje.CONFIRMADO, actorSub, null));
+    }
+
+    /**
+     * El único camino para cambiar el estado. No valida si la transición está permitida: eso lo decide
+     * cada clase de estado del patrón State (FLY-27) antes de llamar acá.
+     */
+    void cambiarEstado(TipoEstadoViaje nuevo, String actorSub, String detalle) {
+        eventos.add(new EventoViaje(this, estado, nuevo, actorSub, detalle));
+        this.estado = nuevo;
+    }
+
+    public boolean esParte(String sub) {
+        return dadorSub.equals(sub) || transportistaSub.equals(sub);
+    }
+
+    /** Solo lectura: los eventos se agregan con cambiarEstado, nunca desde afuera. */
+    public List<EventoViaje> getEventos() {
+        return Collections.unmodifiableList(eventos);
+    }
+
+    @PrePersist
+    void alCrear() {
+        creadoEn = Instant.now();
+    }
+}

@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <flety-commons.version>0.1.0</flety-commons.version>
+        <flety-commons.version>0.3.0</flety-commons.version>
     </properties>
 
     <dependencies>
