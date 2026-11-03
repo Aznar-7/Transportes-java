@@ -1,5 +1,6 @@
 package com.flety.commons.web;
 
+import com.flety.commons.excepciones.AccesoDenegadoException;
 import com.flety.commons.excepciones.ConflictoException;
 import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.excepciones.ReglaNegocioException;
@@ -65,6 +66,16 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("Carga 7 no existe"));
+    }
+
+    @Test
+    void accesoDenegadoDevuelve403ConElMotivo() throws Exception {
+        mockMvc.perform(get("/ajeno"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.title").value("Sin permiso"))
+                .andExpect(jsonPath("$.detail").value("No sos parte de este viaje"));
     }
 
     @Test
@@ -154,6 +165,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/no-encontrado")
         void noEncontrado() {
             throw new RecursoNoEncontradoException("Carga", 7);
+        }
+
+        @GetMapping("/ajeno")
+        void ajeno() {
+            throw new AccesoDenegadoException("No sos parte de este viaje");
         }
 
         @GetMapping("/conflicto")
