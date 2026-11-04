@@ -12,8 +12,17 @@
 | Usuario | Contraseña | Rol |
 |---|---|---|
 | `transportista1` | `transportista1` | `TRANSPORTISTA` |
+| `transportista2` | `transportista2` | `TRANSPORTISTA` |
 | `dador1` | `dador1` | `DADOR` |
 | `operador1` | `operador1` | `OPERADOR` |
+
+`transportista2` existe para probar el control de dueño (RN-T1): tiene el mismo rol que `transportista1`, así que si pide un recurso de `transportista1` el Gateway lo deja pasar y el 403 lo tiene que dar el servicio.
+
+Si el contenedor de Keycloak ya existía, el realm no se vuelve a importar y los cambios de este archivo no se aplican: Keycloak saltea los realms que ya tiene. Para tomarlos, recreá el contenedor:
+
+```bash
+docker compose up -d --force-recreate keycloak
+```
 
 ## Pedir un token
 
