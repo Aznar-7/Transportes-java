@@ -1,11 +1,11 @@
 # Infraestructura local
 
-Postgres y Keycloak se levantan con un comando, usando el [`docker-compose.yml`](../docker-compose.yml) de la raíz del repo.
+Todo Flety (Postgres, Keycloak, transporte-service, cargas-service y el gateway) se levanta con un comando, usando el [`docker-compose.yml`](../docker-compose.yml) de la raíz del repo.
 
 ## Requisitos
 
-- Docker Desktop (o Docker Engine con el plugin `docker compose`).
-- Libres los puertos `5432` (Postgres) y `8081` (Keycloak).
+- Docker Desktop (o Docker Engine con el plugin `docker compose` y BuildKit, que viene activado por defecto).
+- Libres los puertos `8081` (Keycloak) y `8085` (gateway).
 
 ## Levantar
 
@@ -13,8 +13,26 @@ Desde la raíz del repo:
 
 ```bash
 cp .env.example .env      # solo la primera vez; en PowerShell: Copy-Item .env.example .env
-docker compose up -d
+docker compose up -d --build
 ```
+
+`--build` arma las imágenes de los servicios con el código actual. La primera vez tarda un par de minutos (baja Maven y las dependencias); después, segundos.
+
+El gateway (FLY-14) todavía no está en el repo, así que está detrás del profile `gateway` y `docker compose up` no lo levanta. Cuando exista la carpeta `gateway-service/`:
+
+```bash
+docker compose --profile gateway up -d --build
+```
+
+### Solo la infraestructura, para correr un servicio desde el IDE
+
+El compose principal no publica el puerto de Postgres. [`docker-compose.dev.yml`](../docker-compose.dev.yml) lo agrega:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres keycloak
+```
+
+Así el servicio que corrés en la máquina se conecta a `localhost:5432`, como antes.
 
 `.env` tiene las contraseñas y no se sube al repo. Si falta alguna variable, el compose lo avisa y no arranca.
 
@@ -28,8 +46,23 @@ docker compose logs -f keycloak    # listo cuando aparece "Listening on: http://
 
 | Servicio | Desde la máquina | Desde la red `flety-net` | Para qué |
 |---|---|---|---|
-| Postgres 16 | `localhost:5432` | `postgres:5432` | Una base por servicio |
+| Gateway | `http://localhost:8085` | `http://gateway-service:8085` | La única entrada a la API (profile `gateway`) |
 | Keycloak 26 | `http://localhost:8081` | `http://keycloak:8080` | Realm `flety`, tokens |
+| transporte-service | no se publica | `http://transporte-service:8091` | Transportistas, unidades, retornos |
+| cargas-service | no se publica | `http://cargas-service:8092` | Cargas, propuestas y viajes |
+| Postgres 16 | no se publica (`localhost:5432` con `docker-compose.dev.yml`) | `postgres:5432` | Una base por servicio |
+
+**Solo el gateway y Keycloak publican puertos.** Los servicios se hablan por la red interna con el nombre del servicio, y desde afuera no hay forma de llegarles salteando el gateway y su control de rol. Keycloak se publica porque el cliente le pide el token directamente. La base tampoco se publica: nadie se conecta a ella sin pasar por un servicio.
+
+Cada servicio recibe su configuración por variables de entorno del compose. Las contraseñas salen del `.env`, las mismas que `init-db.sql` usa para crear los usuarios:
+
+| Servicio | Variables |
+|---|---|
+| transporte-service | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (de `TRANSPORTE_DB_PASSWORD`), `SPRING_JPA_HIBERNATE_DDL_AUTO`, `JWK_SET_URI` |
+| cargas-service | `DB_URL`, `DB_USER`, `DB_PASSWORD` (de `CARGAS_DB_PASSWORD`), `TRANSPORTE_URL`, `JWK_SET_URI` |
+| gateway-service | `TRANSPORTE_URL`, `CARGAS_URL`, `JWK_SET_URI`: los nombres que tiene que leer la FLY-14 |
+
+`JWK_SET_URI` es la URL interna de Keycloak (`keycloak:8080`). Los servicios no validan el emisor, así que el token que se pide desde la máquina (emisor `localhost:8081`) vale igual adentro de la red.
 
 ### Postgres
 
@@ -81,6 +114,8 @@ docker compose down -v     # además borra el volumen: la próxima vez init-db.s
 
 ## Problemas comunes
 
-- **`port is already allocated`**: ya hay algo en el 5432 o el 8081 (por ejemplo, un Postgres instalado en la máquina). Frenalo o cambiá el puerto de la izquierda en el compose.
+- **`port is already allocated`**: ya hay algo en el 8081 o el 8085 (o en el 5432, si usás `docker-compose.dev.yml`; por ejemplo, un Postgres instalado en la máquina). Frenalo o cambiá el puerto de la izquierda en el compose.
+- **`"/gateway-service/src": not found`** al construir: se pidió el profile `gateway` y la carpeta del gateway todavía no existe (FLY-14).
+- **`"/FALTA-build-arg-SERVICIO/...": not found`**: se corrió `docker build` sin `--build-arg SERVICIO=...`.
 - **`password authentication failed`** después de cambiar el `.env`: el usuario se creó con la contraseña vieja. Corré `docker compose down -v` y volvé a levantar.
 - **`init-db.sql` falla con errores raros de sintaxis**: puede que el archivo tenga saltos de línea de Windows (CRLF). El `.gitattributes` lo evita, pero si lo editaste a mano, guardalo con LF.

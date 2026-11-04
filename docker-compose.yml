@@ -1,10 +1,22 @@
-# Infraestructura base de Flety: Postgres y Keycloak en la red flety-net.
-# Los servicios (transporte, cargas, gateway) se suman a esta misma red.
+# Flety completo: Postgres, Keycloak, los dos servicios y el gateway, en la red flety-net.
 #
 #   cp .env.example .env
-#   docker compose up -d
+#   docker compose up -d --build
+#
+# Desde la máquina solo se llega al gateway (8085) y a Keycloak (8081, para pedir tokens). Postgres y los
+# servicios no publican puertos: se hablan entre ellos por la red interna, con el nombre del servicio
+# (postgres:5432, transporte-service:8091, cargas-service:8092). Así nadie puede saltearse el gateway y
+# llegar directo a un servicio sin pasar por su control de rol, ni conectarse a la base desde afuera.
+#
+# Para correr un servicio desde el IDE contra esta base, sumá docker-compose.dev.yml (publica el 5432):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres keycloak
 
 name: flety
+
+# Lo mismo para los tres servicios Java: dónde están las claves públicas del realm para validar los JWT.
+# Es la URL interna de Keycloak; el emisor (iss) del token sigue siendo localhost:8081 (ver KC_HOSTNAME).
+x-jwt: &jwt
+  JWK_SET_URI: http://keycloak:8080/realms/flety/protocol/openid-connect/certs
 
 services:
   postgres:
@@ -16,8 +28,7 @@ services:
       # Las lee init-db.sql para crear un usuario por servicio
       TRANSPORTE_DB_PASSWORD: ${TRANSPORTE_DB_PASSWORD:?falta TRANSPORTE_DB_PASSWORD en .env}
       CARGAS_DB_PASSWORD: ${CARGAS_DB_PASSWORD:?falta CARGAS_DB_PASSWORD en .env}
-    ports:
-      - "5432:5432"
+    # Sin ports: la base solo se alcanza desde flety-net. Para desarrollo, docker-compose.dev.yml publica el 5432.
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
@@ -45,6 +56,7 @@ services:
       KC_HOSTNAME: http://localhost:8081
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HEALTH_ENABLED: "true"
+    # Publica su puerto porque el cliente pide el token directo a Keycloak, no a través del gateway.
     ports:
       - "8081:8080"
     volumes:
@@ -55,6 +67,8 @@ services:
   # ---------- Servicios de Flety ----------
   # Las tres imágenes salen del mismo Dockerfile de plantilla (raíz del repo); cambia solo SERVICIO.
   # docker compose build arma las que falten; docker compose up --build las rearma con el código actual.
+  # Ninguno publica puertos: se llega a ellos solo a través del gateway.
+  # Las contraseñas salen del .env (las mismas que usa init-db.sql para crear los usuarios); nunca del repo.
 
   transporte-service:
     build:
@@ -63,6 +77,20 @@ services:
         SERVICIO: transporte-service
     image: flety/transporte-service:latest
     container_name: flety-transporte
+    environment:
+      <<: *jwt
+      # transporte-service no lee variables propias para la base: Spring toma estas directamente
+      # (SPRING_DATASOURCE_URL equivale a spring.datasource.url) y pisan cualquier valor del application.yml.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transporte_db
+      SPRING_DATASOURCE_USERNAME: transporte
+      SPRING_DATASOURCE_PASSWORD: ${TRANSPORTE_DB_PASSWORD:?falta TRANSPORTE_DB_PASSWORD en .env}
+      # Su application.yml no lo define (está solo en el perfil local) y con Postgres el valor por defecto es
+      # none: sin esto, Hibernate no crearía las tablas.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - flety-net
 
@@ -73,13 +101,27 @@ services:
         SERVICIO: cargas-service
     image: flety/cargas-service:latest
     container_name: flety-cargas
+    environment:
+      <<: *jwt
+      DB_URL: jdbc:postgresql://postgres:5432/cargas_db
+      DB_USER: cargas
+      DB_PASSWORD: ${CARGAS_DB_PASSWORD:?falta CARGAS_DB_PASSWORD en .env}
+      # Para el contrato interno (habilitación de unidades): por la red, con el nombre del servicio.
+      TRANSPORTE_URL: http://transporte-service:8091
+    depends_on:
+      postgres:
+        condition: service_healthy
+      transporte-service:
+        condition: service_started
+    restart: unless-stopped
     networks:
       - flety-net
 
   # El gateway es la FLY-14 y todavía no está en el repo: queda detrás del profile "gateway" para que
   # docker compose up no falle buscando la carpeta. Cuando exista gateway-service/, se levanta con
-  #   docker compose --profile gateway up -d
-  # y al terminar la FLY-14 se le saca el profile.
+  #   docker compose --profile gateway up -d --build
+  # y al terminar la FLY-14 se le saca el profile. Las variables de abajo son las que le deja preparadas
+  # este compose: la FLY-14 tiene que leer esos nombres (o avisar para cambiarlos acá).
   gateway-service:
     profiles: ["gateway"]
     build:
@@ -88,6 +130,19 @@ services:
         SERVICIO: gateway-service
     image: flety/gateway-service:latest
     container_name: flety-gateway
+    environment:
+      <<: *jwt
+      TRANSPORTE_URL: http://transporte-service:8091
+      CARGAS_URL: http://cargas-service:8092
+    # La única puerta de entrada a la API (docs/gateway/rutas.md).
+    ports:
+      - "8085:8085"
+    depends_on:
+      transporte-service:
+        condition: service_started
+      cargas-service:
+        condition: service_started
+    restart: unless-stopped
     networks:
       - flety-net
 

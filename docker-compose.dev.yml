@@ -1,0 +1,12 @@
+# Agregado para desarrollo (FLY-29): publica el puerto de Postgres, que el docker-compose.yml principal cierra.
+# Sirve para correr transporte o cargas desde el IDE (en la máquina) contra la base del compose.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres keycloak
+#
+# Compose junta los dos archivos: lo de acá se suma a lo del principal. No va en el compose principal a propósito:
+# con la base publicada, cualquiera que llegue a la máquina se puede conectar sin pasar por los servicios.
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
