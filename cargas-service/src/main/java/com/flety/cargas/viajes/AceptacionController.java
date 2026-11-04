@@ -31,7 +31,8 @@ public class AceptacionController {
 
     /**
      * 201 con el viaje creado y su Location. 403 si la carga no es del dador; 404 si la propuesta no existe;
-     * 409 si la propuesta o la carga ya no están abiertas; 422 si falta aceptar el riesgo (RN-06).
+     * 409 si la propuesta o la carga ya no están abiertas; 422 si falta aceptar el riesgo (RN-06) o si la unidad
+     * ya no está habilitada (la propuesta queda INVALIDADA); 503 si transporte-service no responde.
      */
     @PostMapping("/{id}/aceptacion")
     public ResponseEntity<ViajeDetalleDTO> aceptar(@PathVariable Long id,

@@ -37,6 +37,10 @@ public class AceptarPropuestaService {
         String dadorSub = usuarioActual.id();
         DatosAceptacion datos = confirmacion.preparar(propuestaId, dadorSub, aceptoRiesgo);
         HabilitacionUnidadDTO habilitacion = transporte.consultarHabilitacion(datos.unidadId(), datos.hasta());
+        if (!habilitacion.habilitada()) {
+            confirmacion.invalidar(propuestaId);
+            throw new UnidadNoHabilitadaException(habilitacion.motivos());
+        }
         return confirmacion.confirmar(propuestaId, dadorSub, habilitacion);
     }
 }

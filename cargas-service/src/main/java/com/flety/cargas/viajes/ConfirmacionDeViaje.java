@@ -98,6 +98,21 @@ public class ConfirmacionDeViaje {
         return viajes.saveAndFlush(viaje).getId();
     }
 
+    /**
+     * La unidad ya no está habilitada: la propuesta pasa a INVALIDADA y nada más (la carga y las demás propuestas
+     * siguen igual, el dador puede elegir otra). Es una transacción propia que hace commit antes de que el
+     * orquestador responda 422: si el cambio se hiciera dentro de confirmar y después se lanzara la excepción,
+     * el rollback se lo llevaría y la propuesta seguiría PENDIENTE.
+     * Si otro pedido ya la movió de PENDIENTE, no se toca.
+     */
+    @Transactional
+    public void invalidar(Long propuestaId) {
+        Propuesta propuesta = buscar(propuestaId);
+        if (propuesta.getEstado() == EstadoPropuesta.PENDIENTE) {
+            propuesta.setEstado(EstadoPropuesta.INVALIDADA);
+        }
+    }
+
     private Propuesta buscar(Long propuestaId) {
         return propuestas.findById(propuestaId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Propuesta", propuestaId));

@@ -168,6 +168,27 @@ class AceptarPropuestaTest {
     }
 
     @Test
+    void conLaUnidadYaNoHabilitadaLaPropuestaQuedaInvalidada() throws Exception {
+        Carga carga = fixture.cargaAbierta();
+        Long unidadId = ViajesDePrueba.unidadNueva();
+        transporte.conHabilitacion(TransporteDePrueba.noHabilitada(unidadId, "SEGURO_VENCIDO", "VTV_VENCIDA"));
+        Propuesta propuesta = fixture.propuestaPendiente(carga, unidadId);
+        Propuesta otra = propuestaHabilitada(carga, ViajesDePrueba.SUB_TERCERO);
+
+        aceptar(propuesta.getId(), TokensDePrueba.DADOR)
+                .andExpect(status().is(422))
+                .andExpect(jsonPath("$.title").value("Regla de negocio incumplida"))
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("SEGURO_VENCIDO, VTV_VENCIDA")));
+
+        // La invalidación quedó guardada aunque la respuesta fue un error.
+        assertThat(fixture.estadoDePropuesta(propuesta.getId())).isEqualTo(EstadoPropuesta.INVALIDADA);
+        // El resto no se tocó: la carga sigue abierta y el dador puede elegir la otra.
+        assertThat(fixture.estadoDeCarga(carga.getId())).isEqualTo(EstadoCarga.CON_PROPUESTAS);
+        assertThat(fixture.estadoDePropuesta(otra.getId())).isEqualTo(EstadoPropuesta.PENDIENTE);
+        aceptar(otra.getId(), TokensDePrueba.DADOR).andExpect(status().isCreated());
+    }
+
+    @Test
     void conTransporteCaidoDa503YNoConfirmaNada() throws Exception {
         Carga carga = fixture.cargaAbierta();
         Propuesta propuesta = propuestaHabilitada(carga);
