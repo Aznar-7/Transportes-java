@@ -41,3 +41,15 @@ La respuesta trae la cancelación:
 `cancelacion` es null mientras el viaje siga en pie. El evento de la línea de tiempo también lo dice: `Canceló el TRANSPORTISTA con penalidad: Se rompió el camión`.
 
 Con el viaje cancelado ya no hay acuerdo, así que no se muestran los contactos ni las direcciones exactas (RN-13).
+
+## Qué pasa con la carga
+
+La cancelación cambia **dos entidades en la misma transacción**: el viaje pasa a CANCELADO y su carga deja de estar ASIGNADA. O cambian las dos o ninguna: si el viaje no se puede cancelar (409), la carga queda como estaba; y como `Carga` tiene `@Version`, si otro pedido la modificó mientras tanto, falla su UPDATE y se deshace también la cancelación del viaje.
+
+| Quién cancela | Ventana de carga | La carga queda |
+|---|---|---|
+| Dador | cualquiera | CANCELADA: ya no quiere moverla |
+| Transportista | abierta (no pasó `cargaHasta`) | PUBLICADA: el dador está a tiempo de conseguir otro transportista |
+| Transportista | cerrada | VENCIDA: nadie puede cargarla a tiempo, como cualquier carga sin viaje al cerrar su ventana (RN-17) |
+
+Cuando la carga vuelve a PUBLICADA puede recibir propuestas nuevas y tener otro viaje: el índice único parcial `uk_viaje_carga_no_cancelado` no cuenta los viajes CANCELADOS (FLY-26). Las propuestas que se habían rechazado al aceptar la primera siguen RECHAZADA: los transportistas que quieran vuelven a proponer.

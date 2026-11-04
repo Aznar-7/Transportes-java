@@ -1,5 +1,6 @@
 package com.flety.cargas.viajes;
 
+import com.flety.cargas.mercado.EstadoCarga;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -8,7 +9,8 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Las reglas de la cancelación, en memoria y sin Spring: la penalidad según cuánto falta para la carga.
+ * Las reglas de la cancelación, en memoria y sin Spring: la penalidad según cuánto falta para la carga, y el
+ * estado en que queda la carga según quién cancela.
  */
 class CancelacionDelViajeTest {
 
@@ -55,6 +57,56 @@ class CancelacionDelViajeTest {
         viaje.cancelar("No llegó el camión", DADOR);
 
         assertThat(viaje.getConPenalidad()).isTrue();
+    }
+
+    // ---- El estado de la carga según quién cancela ----
+
+    @Test
+    void siCancelaElDadorLaCargaQuedaCancelada() {
+        Viaje viaje = EstadosDelViajeTest.viajeEnMemoria();
+
+        viaje.cancelar("Se suspendió la venta", DADOR);
+
+        assertThat(viaje.getCarga().getEstado()).isEqualTo(EstadoCarga.CANCELADA);
+    }
+
+    @Test
+    void siCancelaElTransportistaConLaVentanaAbiertaLaCargaVuelveAPublicada() {
+        Viaje viaje = EstadosDelViajeTest.viajeEnMemoria();
+
+        viaje.cancelar("Se rompió el camión", TRANSPORTISTA);
+
+        assertThat(viaje.getCarga().getEstado()).isEqualTo(EstadoCarga.PUBLICADA);
+    }
+
+    /** La ventana sigue abierta aunque ya haya empezado: vale hasta cargaHasta (cargaDesde + 8 h en el fixture). */
+    @Test
+    void laVentanaEmpezadaPeroNoCerradaSigueAbierta() {
+        Viaje viaje = EstadosDelViajeTest.viajeEnMemoria(dentroDe(Duration.ofHours(-2)));
+
+        viaje.cancelar("Se rompió el camión", TRANSPORTISTA);
+
+        assertThat(viaje.getCarga().getEstado()).isEqualTo(EstadoCarga.PUBLICADA);
+        assertThat(viaje.getConPenalidad()).isTrue();
+    }
+
+    @Test
+    void siCancelaElTransportistaConLaVentanaCerradaLaCargaVence() {
+        // La ventana de carga fue de hace 10 h a hace 2 h.
+        Viaje viaje = EstadosDelViajeTest.viajeEnMemoria(dentroDe(Duration.ofHours(-10)));
+
+        viaje.cancelar("No llegué", TRANSPORTISTA);
+
+        assertThat(viaje.getCarga().getEstado()).isEqualTo(EstadoCarga.VENCIDA);
+    }
+
+    @Test
+    void siCancelaElDadorConLaVentanaCerradaLaCargaIgualQuedaCancelada() {
+        Viaje viaje = EstadosDelViajeTest.viajeEnMemoria(dentroDe(Duration.ofHours(-10)));
+
+        viaje.cancelar("Ya no la necesito", DADOR);
+
+        assertThat(viaje.getCarga().getEstado()).isEqualTo(EstadoCarga.CANCELADA);
     }
 
     @Test
