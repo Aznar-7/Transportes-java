@@ -1,4 +1,4 @@
-package com.flety.transporte_service;
+package com.flety.transporte;
 
 import com.flety.commons.web.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;

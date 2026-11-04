@@ -1,4 +1,4 @@
-package com.flety.transporte_service;
+package com.flety.transporte;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
