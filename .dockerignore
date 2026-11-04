@@ -1,0 +1,13 @@
+# Contexto de build del Dockerfile de la raíz (FLY-29).
+# Es una lista de lo que SÍ entra: se ignora todo y se habilita solo lo que la imagen necesita.
+# Así nunca viajan al build el .env con las contraseñas, el .git ni los target/ compilados en la máquina,
+# aunque mañana se agregue otra carpeta al repo.
+*
+!flety-commons/pom.xml
+!flety-commons/src
+!transporte-service/pom.xml
+!transporte-service/src
+!cargas-service/pom.xml
+!cargas-service/src
+!gateway-service/pom.xml
+!gateway-service/src
