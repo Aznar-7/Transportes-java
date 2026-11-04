@@ -1,5 +1,6 @@
 package com.flety.transporte.documento;
 
+import com.flety.commons.excepciones.ConflictoException;
 import com.flety.transporte.unidad.Unidad;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -55,6 +56,23 @@ public class Documento {
         this.vigencia = vigencia;
         this.sumaAsegurada = sumaAsegurada;
         this.estado = EstadoDocumento.EN_REVISION;
+    }
+
+    public void aprobar() {
+        exigirEnRevision();
+        estado = EstadoDocumento.APROBADO;
+    }
+
+    public void rechazar(String motivo) {
+        exigirEnRevision();
+        estado = EstadoDocumento.RECHAZADO;
+        motivoRechazo = motivo;
+    }
+
+    private void exigirEnRevision() {
+        if (estado != EstadoDocumento.EN_REVISION) {
+            throw new ConflictoException("El documento ya fue revisado");
+        }
     }
 
     public Long getId() { return id; }

@@ -8,6 +8,8 @@ import com.flety.transporte.transportista.dto.TransportistaResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class TransportistaService {
 
@@ -35,6 +37,21 @@ public class TransportistaService {
     @Transactional(readOnly = true)
     public TransportistaResponse buscarPropio() {
         return TransportistaResponse.desde(propio());
+    }
+
+    /** Para el operador. Con estado null trae todos. */
+    @Transactional(readOnly = true)
+    public List<TransportistaResponse> listar(EstadoTransportista estado) {
+        List<Transportista> encontrados = estado == null ? repository.findAll() : repository.findByEstado(estado);
+        return encontrados.stream().map(TransportistaResponse::desde).toList();
+    }
+
+    @Transactional
+    public TransportistaResponse verificar(Long id) {
+        Transportista transportista = repository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Transportista", id));
+        transportista.verificar();
+        return TransportistaResponse.desde(transportista);
     }
 
     /** La organización del usuario actual, para los módulos que cuelgan de ella (unidades, retornos). */

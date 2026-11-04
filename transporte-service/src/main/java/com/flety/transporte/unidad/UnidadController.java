@@ -4,6 +4,7 @@ import com.flety.transporte.unidad.dto.AltaUnidadRequest;
 import com.flety.transporte.unidad.dto.UnidadResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/transporte/unidades")
+@PreAuthorize("hasRole('TRANSPORTISTA')")
 public class UnidadController {
 
     private final UnidadService service;

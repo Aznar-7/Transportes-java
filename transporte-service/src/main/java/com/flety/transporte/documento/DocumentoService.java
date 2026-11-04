@@ -9,6 +9,8 @@ import com.flety.transporte.unidad.UnidadService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class DocumentoService {
 
@@ -38,5 +40,24 @@ public class DocumentoService {
         }
         Documento nuevo = new Documento(tipo, unidad, pedido.numero(), pedido.vigencia(), pedido.sumaAsegurada());
         return DocumentoResponse.desde(repository.save(nuevo));
+    }
+
+    /** Para el operador. Con estado null trae todos. */
+    @Transactional(readOnly = true)
+    public List<DocumentoResponse> listar(EstadoDocumento estado) {
+        List<Documento> encontrados = estado == null ? repository.findAll() : repository.findByEstado(estado);
+        return encontrados.stream().map(DocumentoResponse::desde).toList();
+    }
+
+    @Transactional
+    public DocumentoResponse revisar(Long id, boolean aprobado, String motivo) {
+        Documento documento = repository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Documento", id));
+        if (aprobado) {
+            documento.aprobar();
+        } else {
+            documento.rechazar(motivo);
+        }
+        return DocumentoResponse.desde(documento);
     }
 }
