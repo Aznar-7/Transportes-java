@@ -26,6 +26,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +43,9 @@ import java.util.List;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Viaje {
+
+    /** Desde la entrega, el dador tiene 48 h para dar conformidad o abrir una disputa. */
+    public static final Duration VENTANA_CONFORMIDAD = Duration.ofHours(48);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -103,7 +107,7 @@ public class Viaje {
     @Column(nullable = false)
     private TipoEstadoViaje estado;
 
-    /** Se completan en FLY-27 (entrega y ventana de 48 h) y FLY-30 (conformidad). */
+    /** Los completa la entrega (marcarEntregado); conformadoPor, la conformidad (FLY-30). */
     private Instant entregadoEn;
 
     private Instant ventanaConformidadHasta;
@@ -156,8 +160,13 @@ public class Viaje {
         estadoActual().iniciarTransito(this, actorSub);
     }
 
-    public void registrarEntrega(DatosEntrega entrega, String actorSub) {
+    /**
+     * @return el comprobante de la entrega, para que el service lo guarde. Si el estado no permite entregar,
+     * la excepción sale antes y no se arma ningún comprobante.
+     */
+    public ComprobanteEntrega registrarEntrega(DatosEntrega entrega, String actorSub) {
         estadoActual().registrarEntrega(this, entrega, actorSub);
+        return new ComprobanteEntrega(this, entrega.numeroRemito(), entrega.recibioNombre(), entrega.recibioDni());
     }
 
     public void conformar(ConformadoPor por, String actorSub) {
@@ -175,6 +184,17 @@ public class Viaje {
     /** Se resuelve en cada llamada a partir del enum guardado: no hay un segundo campo que pueda desincronizarse. */
     private EstadoViaje estadoActual() {
         return EstadosViaje.de(estado);
+    }
+
+    /**
+     * Lo llama EnTransito al registrar la entrega: desde ahora corre la ventana de conformidad. Si en 48 h el
+     * dador no da conformidad ni abre una disputa, la da el sistema (FLY-30).
+     */
+    void marcarEntregado(DatosEntrega entrega, String actorSub) {
+        this.entregadoEn = Instant.now();
+        this.ventanaConformidadHasta = entregadoEn.plus(VENTANA_CONFORMIDAD);
+        cambiarEstado(TipoEstadoViaje.ENTREGADO, actorSub,
+                "Remito " + entrega.numeroRemito() + ", recibió " + entrega.recibioNombre());
     }
 
     /**

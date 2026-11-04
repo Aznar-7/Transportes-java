@@ -8,7 +8,7 @@ El transportista registra cómo avanza el viaje: cargó, salió, entregó. El ci
 
 | Código | Cuándo |
 |---|---|
-| 400 | El pedido está mal armado: falta el hito o tiene un valor que no existe |
+| 400 | El pedido está mal armado: falta el hito o tiene un valor que no existe, ENTREGADO sin comprobante (o el comprobante incompleto), o un comprobante con otro hito |
 | 403 | Quien registra no es el transportista de este viaje, o no tiene el rol TRANSPORTISTA |
 | 404 | El viaje no existe |
 | 409 | El estado actual no permite ese hito: saltearlo, repetirlo o volver atrás. También si otro pedido cambió el viaje al mismo tiempo |
@@ -30,6 +30,33 @@ CONFIRMADO --cargar--> CARGADO --iniciarTransito--> EN_TRANSITO --registrarEntre
 | `ENTREGADO` | `registrarEntrega` | EN_TRANSITO |
 
 Cada hito deja un renglón en la línea de tiempo (`EventoViaje`), con el estado anterior, el nuevo y el `sub` del transportista.
+
+## La entrega y su comprobante
+
+Para pasar a ENTREGADO el comprobante es obligatorio: el remito y quién recibió la carga. Es la prueba de la entrega si después el dador abre una disputa.
+
+```json
+{
+  "hito": "ENTREGADO",
+  "comprobante": { "numeroRemito": "R-0001-00012345", "recibioNombre": "Ana Gómez", "recibioDni": "30111222" }
+}
+```
+
+- **Sin comprobante es 400, no 409.** Es un pedido incompleto, no un problema de estado, así que se responde antes de mirar el viaje. Mandar un comprobante con otro hito también es 400: si se ignorara en silencio, el transportista creería que la entrega quedó registrada.
+- **Se guarda en `ComprobanteEntrega`,** que no se edita ni se borra: su repositorio solo ofrece guardar y leer. Hay a lo sumo uno por viaje (`viaje_id` es único).
+- **Corre la ventana de conformidad.** Al entregar se guarda `entregadoEn` y `ventanaConformidadHasta = entregadoEn + 48 h` (`Viaje.VENTANA_CONFORMIDAD`). En ese plazo el dador da conformidad o abre una disputa; si no hace nada, la conformidad la da el sistema (FLY-30). Las dos fechas salen en `GET /api/viajes/{id}`.
+- **El remito queda en la línea de tiempo:** el evento de la entrega dice `Remito R-0001-00012345, recibió Ana Gómez`.
+
+Un 400 por falta de comprobante:
+
+```json
+{
+  "title": "Datos inválidos",
+  "status": 400,
+  "detail": "Hay campos con errores",
+  "errores": { "comprobanteSegunElHito": "el comprobante es obligatorio con ENTREGADO y no va con los demás hitos" }
+}
+```
 
 ## Patrón State
 

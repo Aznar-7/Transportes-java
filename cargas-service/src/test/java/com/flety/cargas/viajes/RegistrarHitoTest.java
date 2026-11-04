@@ -1,6 +1,7 @@
 package com.flety.cargas.viajes;
 
 import com.flety.cargas.TokensDePrueba;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,9 +11,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,6 +44,9 @@ class RegistrarHitoTest {
     @Autowired
     ViajesDePrueba.Fixture fixture;
 
+    @Autowired
+    ComprobanteEntregaRepository comprobantes;
+
     @Test
     void elTransportistaRecorreLosHitosEnOrden() throws Exception {
         Long id = fixture.viajeConfirmado().getId();
@@ -56,6 +67,39 @@ class RegistrarHitoTest {
                 .andExpect(jsonPath("$.estado").value("ENTREGADO"))
                 .andExpect(jsonPath("$.lineaDeTiempo.length()").value(4))
                 .andExpect(jsonPath("$.lineaDeTiempo[3].detalle").value("Remito R-0001-00012345, recibió Ana Gómez"));
+    }
+
+    @Test
+    void laEntregaGuardaElComprobanteYAbreLaVentanaDe48h() throws Exception {
+        Long id = enTransito();
+
+        MvcResult resultado = entrega(id, COMPROBANTE)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.conformadoPor").value(nullValue()))
+                .andReturn();
+
+        Instant entregadoEn = Instant.parse(JsonPath.read(resultado.getResponse().getContentAsString(), "$.entregadoEn"));
+        Instant ventana = Instant.parse(JsonPath.read(resultado.getResponse().getContentAsString(),
+                "$.ventanaConformidadHasta"));
+        assertThat(Duration.between(entregadoEn, ventana)).isEqualTo(Duration.ofHours(48));
+        assertThat(entregadoEn).isCloseTo(Instant.now(), within(1, ChronoUnit.MINUTES));
+
+        ComprobanteEntrega comprobante = comprobantes.findByViajeId(id).orElseThrow();
+        assertThat(comprobante.getNumeroRemito()).isEqualTo("R-0001-00012345");
+        assertThat(comprobante.getRecibioNombre()).isEqualTo("Ana Gómez");
+        assertThat(comprobante.getRecibioDni()).isEqualTo("30111222");
+    }
+
+    @Test
+    void antesDeEntregarNoHayVentanaNiComprobante() throws Exception {
+        Long id = fixture.viajeConfirmado().getId();
+
+        hito(id, "CARGADO", TokensDePrueba.TRANSPORTISTA)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entregadoEn").value(nullValue()))
+                .andExpect(jsonPath("$.ventanaConformidadHasta").value(nullValue()));
+
+        assertThat(comprobantes.findByViajeId(id)).isEmpty();
     }
 
     @Test
@@ -81,6 +125,14 @@ class RegistrarHitoTest {
     @Test
     void unViajeQueNoExisteDa404() throws Exception {
         hito(999_999L, "CARGADO", TokensDePrueba.TRANSPORTISTA).andExpect(status().isNotFound());
+    }
+
+    /** Un viaje del fixture llevado hasta EN_TRANSITO por la API. */
+    Long enTransito() throws Exception {
+        Long id = fixture.viajeConfirmado().getId();
+        hito(id, "CARGADO", TokensDePrueba.TRANSPORTISTA).andExpect(status().isOk());
+        hito(id, "EN_TRANSITO", TokensDePrueba.TRANSPORTISTA).andExpect(status().isOk());
+        return id;
     }
 
     ResultActions hito(Long viajeId, String hito, String token) throws Exception {

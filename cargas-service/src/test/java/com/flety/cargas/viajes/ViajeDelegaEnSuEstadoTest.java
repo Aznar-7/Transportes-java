@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
@@ -31,6 +33,31 @@ class ViajeDelegaEnSuEstadoTest {
                         tuple(TipoEstadoViaje.CONFIRMADO, TipoEstadoViaje.CARGADO, TRANSPORTISTA),
                         tuple(TipoEstadoViaje.CARGADO, TipoEstadoViaje.EN_TRANSITO, TRANSPORTISTA),
                         tuple(TipoEstadoViaje.EN_TRANSITO, TipoEstadoViaje.ENTREGADO, TRANSPORTISTA));
+    }
+
+    @Test
+    void laEntregaArmaElComprobanteYAbreLaVentanaDe48h() {
+        Viaje viaje = EstadosDelViajeTest.viajeEnMemoria();
+        viaje.cargar(TRANSPORTISTA);
+        viaje.iniciarTransito(TRANSPORTISTA);
+
+        ComprobanteEntrega comprobante = viaje.registrarEntrega(
+                new DatosEntrega("R-0001-00012345", "Ana Gómez", "30111222"), TRANSPORTISTA);
+
+        assertThat(comprobante.getViaje()).isSameAs(viaje);
+        assertThat(comprobante.getNumeroRemito()).isEqualTo("R-0001-00012345");
+        assertThat(viaje.getEntregadoEn()).isNotNull();
+        assertThat(viaje.getVentanaConformidadHasta()).isEqualTo(viaje.getEntregadoEn().plus(Duration.ofHours(48)));
+    }
+
+    @Test
+    void sinEntregaNoHayComprobante() {
+        Viaje viaje = EstadosDelViajeTest.viajeEnMemoria();
+
+        assertThatThrownBy(() -> viaje.registrarEntrega(new DatosEntrega("R-1", "Ana", "30111222"), TRANSPORTISTA))
+                .isInstanceOf(TransicionNoPermitidaException.class);
+        assertThat(viaje.getEntregadoEn()).isNull();
+        assertThat(viaje.getVentanaConformidadHasta()).isNull();
     }
 
     @Test

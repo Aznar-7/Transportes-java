@@ -16,16 +16,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class RegistrarHitoService {
 
     private final ViajeRepository viajes;
+    private final ComprobanteEntregaRepository comprobantes;
     private final UsuarioActual usuarioActual;
 
-    public RegistrarHitoService(ViajeRepository viajes, UsuarioActual usuarioActual) {
+    public RegistrarHitoService(ViajeRepository viajes, ComprobanteEntregaRepository comprobantes,
+                                UsuarioActual usuarioActual) {
         this.viajes = viajes;
+        this.comprobantes = comprobantes;
         this.usuarioActual = usuarioActual;
     }
 
     /**
      * Todo en una transacción: si el estado no permite el hito, la excepción la deshace y no queda ni el cambio
-     * de estado ni el evento.
+     * de estado, ni el evento, ni el comprobante.
      */
     @Transactional
     public void registrar(Long viajeId, RegistroHitoDTO pedido) {
@@ -39,8 +42,8 @@ public class RegistrarHitoService {
         switch (pedido.hito()) {
             case CARGADO -> viaje.cargar(sub);
             case EN_TRANSITO -> viaje.iniciarTransito(sub);
-            case ENTREGADO -> viaje.registrarEntrega(
-                    pedido.comprobante() == null ? null : pedido.comprobante().aDatos(), sub);
+            // El comprobante llega siempre: RegistroHitoDTO ya respondió 400 si faltaba.
+            case ENTREGADO -> comprobantes.save(viaje.registrarEntrega(pedido.comprobante().aDatos(), sub));
         }
         // El viaje ya está managed (se leyó en esta transacción): no hace falta save, Hibernate detecta el cambio.
         // Y no hay que usar save: haría un merge, que copia el EventoViaje nuevo sin su fecha y rompe el INSERT.

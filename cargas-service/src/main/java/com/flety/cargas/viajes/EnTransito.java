@@ -17,7 +17,6 @@ final class EnTransito implements EstadoViaje {
     @Override
     public void registrarEntrega(Viaje viaje, DatosEntrega entrega, String actorSub) {
         Objects.requireNonNull(entrega, "Sin comprobante no se puede registrar la entrega");
-        viaje.cambiarEstado(TipoEstadoViaje.ENTREGADO, actorSub, "Remito " + entrega.numeroRemito()
-                + ", recibió " + entrega.recibioNombre());
+        viaje.marcarEntregado(entrega, actorSub);
     }
 }
