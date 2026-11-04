@@ -189,6 +189,38 @@ class AceptarPropuestaTest {
     }
 
     @Test
+    void laMismaUnidadNoPuedeQuedarEnDosViajesQueSePisan() throws Exception {
+        Long unidadId = ViajesDePrueba.unidadNueva();
+        transporte.conHabilitacion(TransporteDePrueba.habilitada(unidadId));
+        Instant manana = Instant.now().plus(1, ChronoUnit.DAYS);
+        // La primera ocupa la unidad de mañana a mañana + 2 días; la segunda empieza a mitad de esa ventana.
+        Propuesta primera = fixture.propuestaPendiente(fixture.cargaAbierta(manana), unidadId);
+        Propuesta segunda = fixture.propuestaPendiente(fixture.cargaAbierta(manana.plus(1, ChronoUnit.DAYS)), unidadId);
+
+        aceptar(primera.getId(), TokensDePrueba.DADOR).andExpect(status().isCreated());
+        aceptar(segunda.getId(), TokensDePrueba.DADOR)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("La unidad ya tiene un viaje que se superpone con esta carga (RN-15)"));
+
+        assertThat(fixture.estadoDePropuesta(segunda.getId())).isEqualTo(EstadoPropuesta.PENDIENTE);
+    }
+
+    @Test
+    void laMismaUnidadSiPuedeHacerViajesQueNoSePisan() throws Exception {
+        Long unidadId = ViajesDePrueba.unidadNueva();
+        transporte.conHabilitacion(TransporteDePrueba.habilitada(unidadId));
+        Instant manana = Instant.now().plus(1, ChronoUnit.DAYS);
+        Propuesta primera = fixture.propuestaPendiente(fixture.cargaAbierta(manana), unidadId);
+        // Empieza justo cuando termina la descarga de la primera.
+        Propuesta segunda = fixture.propuestaPendiente(fixture.cargaAbierta(manana.plus(2, ChronoUnit.DAYS)), unidadId);
+        segunda.setVencimiento(manana.plus(2, ChronoUnit.DAYS));
+        fixture.propuestas().save(segunda);
+
+        aceptar(primera.getId(), TokensDePrueba.DADOR).andExpect(status().isCreated());
+        aceptar(segunda.getId(), TokensDePrueba.DADOR).andExpect(status().isCreated());
+    }
+
+    @Test
     void conTransporteCaidoDa503YNoConfirmaNada() throws Exception {
         Carga carga = fixture.cargaAbierta();
         Propuesta propuesta = propuestaHabilitada(carga);

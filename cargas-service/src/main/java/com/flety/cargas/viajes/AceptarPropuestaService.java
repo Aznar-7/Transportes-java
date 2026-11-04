@@ -3,7 +3,9 @@ package com.flety.cargas.viajes;
 import com.flety.cargas.transporte.TransporteClient;
 import com.flety.cargas.viajes.ConfirmacionDeViaje.DatosAceptacion;
 import com.flety.commons.contrato.HabilitacionUnidadDTO;
+import com.flety.commons.excepciones.ConflictoException;
 import com.flety.commons.seguridad.UsuarioActual;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -41,6 +43,14 @@ public class AceptarPropuestaService {
             confirmacion.invalidar(propuestaId);
             throw new UnidadNoHabilitadaException(habilitacion.motivos());
         }
-        return confirmacion.confirmar(propuestaId, dadorSub, habilitacion);
+        try {
+            return confirmacion.confirmar(propuestaId, datos, dadorSub, habilitacion);
+        } catch (PessimisticLockingFailureException ex) {
+            // La base no consiguió un bloqueo en 5 segundos, o eligió esta transacción como víctima de un deadlock
+            // y la deshizo. Cuando llega acá el rollback ya se hizo: se responde 409 para que el dador reintente,
+            // en vez de un 500.
+            throw new ConflictoException("Otro pedido está confirmando un viaje con esta carga o esta unidad; "
+                    + "volvé a intentarlo");
+        }
     }
 }

@@ -30,16 +30,25 @@ public class ConfirmacionDeViaje {
     /** Una carga recibe aceptaciones mientras está abierta; ASIGNADA, CERRADA, CANCELADA o VENCIDA ya no. */
     private static final Set<EstadoCarga> CARGA_ABIERTA = EnumSet.of(EstadoCarga.PUBLICADA, EstadoCarga.CON_PROPUESTAS);
 
+    /** Las propuestas de la unidad que se bloquean para ordenar sus aceptaciones (ver bloquearDeLaCargaYLaUnidad). */
+    private static final Set<EstadoPropuesta> PROPUESTAS_ABIERTAS =
+            EnumSet.of(EstadoPropuesta.PENDIENTE, EstadoPropuesta.ACEPTADA);
+
+    private final CargasDeViajes cargas;
     private final PropuestasDeViajes propuestas;
     private final ViajeRepository viajes;
+    private final ViajesActivosPorUnidad viajesActivos;
 
-    public ConfirmacionDeViaje(PropuestasDeViajes propuestas, ViajeRepository viajes) {
+    public ConfirmacionDeViaje(CargasDeViajes cargas, PropuestasDeViajes propuestas, ViajeRepository viajes,
+                               ViajesActivosPorUnidad viajesActivos) {
+        this.cargas = cargas;
         this.propuestas = propuestas;
         this.viajes = viajes;
+        this.viajesActivos = viajesActivos;
     }
 
-    /** Lo que el orquestador necesita saber de la propuesta antes de llamar a transporte-service. */
-    public record DatosAceptacion(Long unidadId, Instant hasta) {
+    /** Lo que el orquestador necesita saber de la propuesta antes de llamar a transporte-service y confirmar. */
+    public record DatosAceptacion(Long cargaId, Long unidadId, Instant hasta) {
     }
 
     /**
@@ -59,7 +68,7 @@ public class ConfirmacionDeViaje {
                     + "para aceptar esta propuesta tenés que aceptar el riesgo (aceptoRiesgo = true)");
         }
         // Los documentos de la unidad tienen que estar vigentes hasta el final de la descarga (RN-04).
-        return new DatosAceptacion(propuesta.getUnidadId(), carga.getDescargaHasta());
+        return new DatosAceptacion(carga.getId(), propuesta.getUnidadId(), carga.getDescargaHasta());
     }
 
     /**
@@ -67,17 +76,28 @@ public class ConfirmacionDeViaje {
      * Todo en una sola transacción: o pasan los cuatro cambios o no pasa ninguno.
      * <p>
      * Vuelve a validar el estado porque entre preparar y confirmar pasó la llamada a transporte-service
-     * y otro pedido pudo haber aceptado otra propuesta de la misma carga.
+     * y otro pedido pudo haber aceptado otra propuesta de la misma carga o de la misma unidad.
      *
      * @param habilitacion lo que respondió transporte-service sobre la unidad: de ahí salen los datos del
      *                     transportista que se copian en el viaje
      * @return el id del viaje creado
      */
     @Transactional
-    public Long confirmar(Long propuestaId, String dadorSub, HabilitacionUnidadDTO habilitacion) {
+    public Long confirmar(Long propuestaId, DatosAceptacion datos, String dadorSub,
+                          HabilitacionUnidadDTO habilitacion) {
+        // Primero los bloqueos, siempre en el mismo orden (carga, después propuestas por id), y recién después las
+        // lecturas. Así lo que se valida es lo que dejó la aceptación anterior, si había una en curso.
+        // Nada se lee antes: una entidad ya cargada en esta transacción no se refresca con el SELECT ... FOR UPDATE.
+        Carga carga = cargas.bloquear(datos.cargaId())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Carga", datos.cargaId()));
+        propuestas.bloquearDeLaCargaYLaUnidad(datos.cargaId(), datos.unidadId(), PROPUESTAS_ABIERTAS);
         Propuesta propuesta = buscar(propuestaId);
-        Carga carga = propuesta.getCarga();
         validarQueSigueAbierta(propuesta, carga);
+        // RN-15: la unidad no puede tener otro viaje activo que se pise con esta carga. Ya lo controló mercado
+        // al proponer (FLY-23), pero desde entonces pudo haberse confirmado otro viaje con la misma unidad.
+        if (viajesActivos.haySuperposicion(propuesta.getUnidadId(), carga.getCargaDesde(), carga.getDescargaHasta())) {
+            throw new ConflictoException("La unidad ya tiene un viaje que se superpone con esta carga (RN-15)");
+        }
 
         // Copia, no referencia: el transportista vive en otra base y el viaje tiene que mostrar con quién se
         // acordó y con qué camión, aunque después cambie su teléfono o la unidad cambie de patente.
@@ -90,7 +110,7 @@ public class ConfirmacionDeViaje {
         propuestas.findByCargaIdAndEstado(carga.getId(), EstadoPropuesta.PENDIENTE).stream()
                 .filter(otra -> !otra.getId().equals(propuestaId))
                 .forEach(otra -> otra.setEstado(EstadoPropuesta.RECHAZADA));
-        // Carga tiene @Version: si otro pedido la asignó mientras tanto, este UPDATE falla y se responde 409.
+        // Carga tiene @Version: si otro pedido que no pasó por estos bloqueos la cambió, este UPDATE falla (409).
         carga.setEstado(EstadoCarga.ASIGNADA);
 
         // saveAndFlush manda los INSERT y UPDATE ahora, dentro del método: si hay un choque de versión,
