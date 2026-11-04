@@ -1,6 +1,7 @@
 package com.flety.cargas.viajes.dto;
 
 import com.flety.cargas.viajes.ConformadoPor;
+import com.flety.cargas.viajes.ParteDelViaje;
 import com.flety.cargas.viajes.TipoEstadoViaje;
 
 import java.math.BigDecimal;
@@ -29,8 +30,19 @@ public record ViajeDetalleDTO(
         Instant entregadoEn,
         Instant ventanaConformidadHasta,
         ConformadoPor conformadoPor,
+        CancelacionDTO cancelacion,
         List<EventoViajeDTO> lineaDeTiempo
 ) {
+
+    /**
+     * Quién canceló, cuándo, por qué y si quedó con penalidad (FLY-28). El campo cancelacion es null mientras el
+     * viaje siga en pie.
+     *
+     * @param conPenalidad se canceló con menos de 24 h para el inicio de la carga
+     */
+    public record CancelacionDTO(ParteDelViaje canceladoPor, Instant canceladoEn, String motivo,
+                                 boolean conPenalidad) {
+    }
 
     /**
      * @param direccion la dirección exacta: con el viaje confirmado las partes la ven (RN-13); null si está cancelado

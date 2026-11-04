@@ -3,6 +3,7 @@ package com.flety.cargas.viajes;
 import com.flety.cargas.mercado.Carga;
 import com.flety.cargas.mercado.Ubicacion;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO;
+import com.flety.cargas.viajes.dto.ViajeDetalleDTO.CancelacionDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO.ContactoDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO.ContactosDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO.EventoViajeDTO;
@@ -75,6 +76,7 @@ public class ConsultaViajesService {
                 viaje.getPrecioAcordado(),
                 vigente ? contactos(viaje) : null,
                 viaje.getEntregadoEn(), viaje.getVentanaConformidadHasta(), viaje.getConformadoPor(),
+                cancelacion(viaje),
                 viaje.getEventos().stream().map(ConsultaViajesService::evento).toList());
     }
 
@@ -95,6 +97,11 @@ public class ConsultaViajesService {
     /** JPA deja en null un @Embedded con todas sus columnas vacías (por ejemplo, el dador sin datos cargados). */
     private static ContactoDTO contacto(Contacto contacto) {
         return contacto == null ? null : new ContactoDTO(contacto.getNombre(), contacto.getTelefono());
+    }
+
+    private static CancelacionDTO cancelacion(Viaje viaje) {
+        return viaje.getCanceladoEn() == null ? null : new CancelacionDTO(viaje.getCanceladoPor(),
+                viaje.getCanceladoEn(), viaje.getMotivoCancelacion(), Boolean.TRUE.equals(viaje.getConPenalidad()));
     }
 
     private static EventoViajeDTO evento(EventoViaje evento) {

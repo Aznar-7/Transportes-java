@@ -47,6 +47,9 @@ public class Viaje {
     /** Desde la entrega, el dador tiene 48 h para dar conformidad o abrir una disputa. */
     public static final Duration VENTANA_CONFORMIDAD = Duration.ofHours(48);
 
+    /** Cancelar con menos de esta anticipación al inicio de la carga deja la cancelación con penalidad (FLY-28). */
+    public static final Duration ANTICIPACION_SIN_PENALIDAD = Duration.ofHours(24);
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -123,6 +126,13 @@ public class Viaje {
 
     @Column(length = 500)
     private String motivoCancelacion;
+
+    /**
+     * Si se canceló con menos de 24 h para la carga. Es Boolean y no boolean: null quiere decir "no se canceló",
+     * y además la columna se agrega a una tabla que ya tiene viajes (ddl-auto update), donde un NOT NULL sin
+     * valor por defecto fallaría.
+     */
+    private Boolean conPenalidad;
 
     @Column(nullable = false, updatable = false)
     private Instant creadoEn;
@@ -208,12 +218,18 @@ public class Viaje {
 
     /**
      * Lo llama Confirmado al cancelar: guarda quién canceló, cuándo y por qué, y deja el evento con el motivo.
+     * <p>
+     * Penalidad: si faltan menos de 24 h para el inicio de la ventana de carga, la otra parte ya se organizó
+     * (el transportista viajó a buscarla, el dador preparó la mercadería) y la cancelación queda con penalidad.
+     * Exactamente 24 h todavía es sin penalidad. Si la ventana ya empezó, también es con penalidad.
      */
     void marcarCancelado(String motivo, String actorSub) {
         this.canceladoPor = parteDe(actorSub);
         this.canceladoEn = Instant.now();
         this.motivoCancelacion = motivo;
-        cambiarEstado(TipoEstadoViaje.CANCELADO, actorSub, "Canceló el " + canceladoPor + ": " + motivo);
+        this.conPenalidad = canceladoEn.isAfter(carga.getCargaDesde().minus(ANTICIPACION_SIN_PENALIDAD));
+        cambiarEstado(TipoEstadoViaje.CANCELADO, actorSub, "Canceló el " + canceladoPor
+                + (conPenalidad ? " con penalidad" : "") + ": " + motivo);
     }
 
     /**
