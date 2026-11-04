@@ -26,6 +26,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +43,9 @@ import java.util.List;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Viaje {
+
+    /** Desde la entrega, el dador tiene 48 h para dar conformidad o abrir una disputa. */
+    public static final Duration VENTANA_CONFORMIDAD = Duration.ofHours(48);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -103,7 +107,7 @@ public class Viaje {
     @Column(nullable = false)
     private TipoEstadoViaje estado;
 
-    /** Se completan en FLY-27 (entrega y ventana de 48 h) y FLY-30 (conformidad). */
+    /** Los completa la entrega (marcarEntregado); conformadoPor, la conformidad (FLY-30). */
     private Instant entregadoEn;
 
     private Instant ventanaConformidadHasta;
@@ -144,9 +148,58 @@ public class Viaje {
         eventos.add(new EventoViaje(this, null, TipoEstadoViaje.CONFIRMADO, actorSub, null));
     }
 
+    // Patrón State (FLY-27): cada acción se delega en el objeto del estado actual, que decide si la permite y a
+    // qué estado pasa. Si no la permite, lanza TransicionNoPermitidaException (409) y el viaje queda como estaba.
+    // Viaje no tiene ni un if sobre su estado: agregar o cambiar una transición se hace en la clase del estado.
+
+    public void cargar(String actorSub) {
+        estadoActual().cargar(this, actorSub);
+    }
+
+    public void iniciarTransito(String actorSub) {
+        estadoActual().iniciarTransito(this, actorSub);
+    }
+
     /**
-     * El único camino para cambiar el estado. No valida si la transición está permitida: eso lo decide
-     * cada clase de estado del patrón State (FLY-27) antes de llamar acá.
+     * @return el comprobante de la entrega, para que el service lo guarde. Si el estado no permite entregar,
+     * la excepción sale antes y no se arma ningún comprobante.
+     */
+    public ComprobanteEntrega registrarEntrega(DatosEntrega entrega, String actorSub) {
+        estadoActual().registrarEntrega(this, entrega, actorSub);
+        return new ComprobanteEntrega(this, entrega.numeroRemito(), entrega.recibioNombre(), entrega.recibioDni());
+    }
+
+    public void conformar(ConformadoPor por, String actorSub) {
+        estadoActual().conformar(this, por, actorSub);
+    }
+
+    public void disputar(String motivo, String descripcion, String actorSub) {
+        estadoActual().disputar(this, motivo, descripcion, actorSub);
+    }
+
+    public void cancelar(String motivo, String actorSub) {
+        estadoActual().cancelar(this, motivo, actorSub);
+    }
+
+    /** Se resuelve en cada llamada a partir del enum guardado: no hay un segundo campo que pueda desincronizarse. */
+    private EstadoViaje estadoActual() {
+        return EstadosViaje.de(estado);
+    }
+
+    /**
+     * Lo llama EnTransito al registrar la entrega: desde ahora corre la ventana de conformidad. Si en 48 h el
+     * dador no da conformidad ni abre una disputa, la da el sistema (FLY-30).
+     */
+    void marcarEntregado(DatosEntrega entrega, String actorSub) {
+        this.entregadoEn = Instant.now();
+        this.ventanaConformidadHasta = entregadoEn.plus(VENTANA_CONFORMIDAD);
+        cambiarEstado(TipoEstadoViaje.ENTREGADO, actorSub,
+                "Remito " + entrega.numeroRemito() + ", recibió " + entrega.recibioNombre());
+    }
+
+    /**
+     * El único camino para cambiar el estado, y siempre deja un EventoViaje. No valida si la transición está
+     * permitida: eso ya lo decidió la clase de estado que llama acá (por eso es del paquete y no pública).
      */
     void cambiarEstado(TipoEstadoViaje nuevo, String actorSub, String detalle) {
         eventos.add(new EventoViaje(this, estado, nuevo, actorSub, detalle));
