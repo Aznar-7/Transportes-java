@@ -4,6 +4,7 @@ import com.flety.transporte.transportista.dto.AltaTransportistaRequest;
 import com.flety.transporte.transportista.dto.TransportistaResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/transporte/transportistas")
+@PreAuthorize("hasRole('TRANSPORTISTA')")
 public class TransportistaController {
 
     private final TransportistaService service;

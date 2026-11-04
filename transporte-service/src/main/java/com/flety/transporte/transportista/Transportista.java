@@ -1,5 +1,6 @@
 package com.flety.transporte.transportista;
 
+import com.flety.commons.excepciones.ConflictoException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -40,6 +41,13 @@ public class Transportista {
         this.razonSocial = razonSocial;
         this.telefono = telefono;
         this.estado = EstadoTransportista.PENDIENTE_VERIFICACION;
+    }
+
+    public void verificar() {
+        if (estado != EstadoTransportista.PENDIENTE_VERIFICACION) {
+            throw new ConflictoException("El transportista ya está verificado");
+        }
+        estado = EstadoTransportista.VERIFICADO;
     }
 
     public Long getId() { return id; }
