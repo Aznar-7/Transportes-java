@@ -87,9 +87,53 @@ class EstadosDelViajeTest {
         assertThat(evento.getActorSub()).isEqualTo(ACTOR);
     }
 
-    /** Un viaje recién confirmado, sin guardar: los estados solo tocan el objeto. */
+    @Test
+    void confirmadoPermiteCancelarACualquieraDeLasPartes() {
+        Viaje delDador = viajeEnMemoria();
+        Viaje delTransportista = viajeEnMemoria();
+
+        new Confirmado().cancelar(delDador, "Se suspendió la venta", ViajesDePrueba.SUB_DADOR);
+        new Confirmado().cancelar(delTransportista, "Se rompió el camión", ACTOR);
+
+        assertThat(delDador.getEstado()).isEqualTo(TipoEstadoViaje.CANCELADO);
+        assertThat(delDador.getCanceladoPor()).isEqualTo(ParteDelViaje.DADOR);
+        assertThat(delTransportista.getCanceladoPor()).isEqualTo(ParteDelViaje.TRANSPORTISTA);
+        assertThat(delTransportista.getMotivoCancelacion()).isEqualTo("Se rompió el camión");
+        assertThat(delTransportista.getCanceladoEn()).isNotNull();
+        assertThat(delTransportista.getEventos().getLast().getDetalle())
+                .isEqualTo("Canceló el TRANSPORTISTA: Se rompió el camión");
+    }
+
+    @Test
+    void canceladoEsFinalYNoPermiteNada() {
+        Viaje viaje = viajeEnMemoria();
+        Cancelado cancelado = new Cancelado();
+
+        assertThatThrownBy(() -> cancelado.cancelar(viaje, "otra vez", ACTOR))
+                .isInstanceOf(TransicionNoPermitidaException.class)
+                .hasMessage("El viaje está CANCELADO: no se puede cancelar");
+        assertThatThrownBy(() -> cancelado.cargar(viaje, ACTOR)).isInstanceOf(TransicionNoPermitidaException.class);
+        assertThatThrownBy(() -> cancelado.registrarEntrega(viaje, ENTREGA, ACTOR))
+                .isInstanceOf(TransicionNoPermitidaException.class);
+    }
+
+    @Test
+    void quienNoEsParteNoPuedeQuedarComoQuienCancelo() {
+        Viaje viaje = viajeEnMemoria();
+
+        assertThatThrownBy(() -> new Confirmado().cancelar(viaje, "motivo", ViajesDePrueba.SUB_TERCERO))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(viaje.getEstado()).isEqualTo(TipoEstadoViaje.CONFIRMADO);
+    }
+
+    /** Un viaje recién confirmado, sin guardar, con la carga en 3 días: los estados solo tocan el objeto. */
     static Viaje viajeEnMemoria() {
-        Carga carga = ViajesDePrueba.nuevaCarga(Instant.now().plus(1, ChronoUnit.DAYS));
+        return viajeEnMemoria(Instant.now().plus(3, ChronoUnit.DAYS));
+    }
+
+    /** Como viajeEnMemoria(), con la carga a partir de cargaDesde (hasta cargaDesde + 8 h). */
+    static Viaje viajeEnMemoria(Instant cargaDesde) {
+        Carga carga = ViajesDePrueba.nuevaCarga(cargaDesde);
         return new Viaje(carga, ViajesDePrueba.nuevaPropuesta(carga, 10L), "AB123CD",
                 new Contacto("Transportes Pérez SRL", "+54 351 555-1234"), null, ViajesDePrueba.SUB_DADOR);
     }

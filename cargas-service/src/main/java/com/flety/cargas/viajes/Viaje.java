@@ -1,6 +1,7 @@
 package com.flety.cargas.viajes;
 
 import com.flety.cargas.mercado.Carga;
+import com.flety.cargas.mercado.EstadoCarga;
 import com.flety.cargas.mercado.Propuesta;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
@@ -46,6 +47,9 @@ public class Viaje {
 
     /** Desde la entrega, el dador tiene 48 h para dar conformidad o abrir una disputa. */
     public static final Duration VENTANA_CONFORMIDAD = Duration.ofHours(48);
+
+    /** Cancelar con menos de esta anticipación al inicio de la carga deja la cancelación con penalidad (FLY-28). */
+    public static final Duration ANTICIPACION_SIN_PENALIDAD = Duration.ofHours(24);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -114,6 +118,22 @@ public class Viaje {
 
     @Enumerated(EnumType.STRING)
     private ConformadoPor conformadoPor;
+
+    /** Los completa la cancelación (marcarCancelado, FLY-28); quedan en null mientras el viaje siga en pie. */
+    @Enumerated(EnumType.STRING)
+    private ParteDelViaje canceladoPor;
+
+    private Instant canceladoEn;
+
+    @Column(length = 500)
+    private String motivoCancelacion;
+
+    /**
+     * Si se canceló con menos de 24 h para la carga. Es Boolean y no boolean: null quiere decir "no se canceló",
+     * y además la columna se agrega a una tabla que ya tiene viajes (ddl-auto update), donde un NOT NULL sin
+     * valor por defecto fallaría.
+     */
+    private Boolean conPenalidad;
 
     @Column(nullable = false, updatable = false)
     private Instant creadoEn;
@@ -195,6 +215,59 @@ public class Viaje {
         this.ventanaConformidadHasta = entregadoEn.plus(VENTANA_CONFORMIDAD);
         cambiarEstado(TipoEstadoViaje.ENTREGADO, actorSub,
                 "Remito " + entrega.numeroRemito() + ", recibió " + entrega.recibioNombre());
+    }
+
+    /**
+     * Lo llama Confirmado al cancelar: guarda quién canceló, cuándo y por qué, y deja el evento con el motivo.
+     * <p>
+     * Penalidad: si faltan menos de 24 h para el inicio de la ventana de carga, la otra parte ya se organizó
+     * (el transportista viajó a buscarla, el dador preparó la mercadería) y la cancelación queda con penalidad.
+     * Exactamente 24 h todavía es sin penalidad. Si la ventana ya empezó, también es con penalidad.
+     */
+    void marcarCancelado(String motivo, String actorSub) {
+        this.canceladoPor = parteDe(actorSub);
+        this.canceladoEn = Instant.now();
+        this.motivoCancelacion = motivo;
+        this.conPenalidad = canceladoEn.isAfter(carga.getCargaDesde().minus(ANTICIPACION_SIN_PENALIDAD));
+        cambiarEstado(TipoEstadoViaje.CANCELADO, actorSub, "Canceló el " + canceladoPor
+                + (conPenalidad ? " con penalidad" : "") + ": " + motivo);
+        // La cancelación cambia dos entidades: el viaje y su carga. Las dos se guardan en la misma transacción
+        // (CancelarViajeService), así que o cambian las dos o ninguna. Carga tiene @Version: si otro pedido la
+        // modificó mientras tanto, falla el UPDATE de la carga y se deshace también la cancelación del viaje.
+        carga.setEstado(estadoDeLaCargaAlCancelar());
+    }
+
+    /**
+     * Qué pasa con la carga depende de quién cancela:
+     * <ul>
+     *     <li>el dador: ya no quiere mover la carga, así que queda CANCELADA;</li>
+     *     <li>el transportista, con la ventana de carga todavía abierta: el dador no tiene la culpa y todavía está a
+     *     tiempo de conseguir otro, así que la carga vuelve a PUBLICADA y puede recibir propuestas nuevas
+     *     (el índice único parcial de viaje.carga_id no cuenta los viajes CANCELADOS);</li>
+     *     <li>el transportista, con la ventana ya cerrada: nadie más puede cargarla a tiempo, así que queda VENCIDA,
+     *     como cualquier carga que se queda sin viaje al cerrar su ventana (RN-17).</li>
+     * </ul>
+     * La ventana está abierta mientras no haya pasado cargaHasta.
+     */
+    private EstadoCarga estadoDeLaCargaAlCancelar() {
+        if (canceladoPor == ParteDelViaje.DADOR) {
+            return EstadoCarga.CANCELADA;
+        }
+        return canceladoEn.isBefore(carga.getCargaHasta()) ? EstadoCarga.PUBLICADA : EstadoCarga.VENCIDA;
+    }
+
+    /**
+     * Qué parte del viaje es ese sub. Quien no es parte no llega acá (el service responde 403 antes); si llegara,
+     * se corta en vez de anotar una cancelación a nombre de nadie.
+     */
+    public ParteDelViaje parteDe(String sub) {
+        if (dadorSub.equals(sub)) {
+            return ParteDelViaje.DADOR;
+        }
+        if (transportistaSub.equals(sub)) {
+            return ParteDelViaje.TRANSPORTISTA;
+        }
+        throw new IllegalArgumentException("El usuario " + sub + " no es parte del viaje " + id);
     }
 
     /**
