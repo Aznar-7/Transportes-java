@@ -52,6 +52,45 @@ services:
     networks:
       - flety-net
 
+  # ---------- Servicios de Flety ----------
+  # Las tres imágenes salen del mismo Dockerfile de plantilla (raíz del repo); cambia solo SERVICIO.
+  # docker compose build arma las que falten; docker compose up --build las rearma con el código actual.
+
+  transporte-service:
+    build:
+      context: .
+      args:
+        SERVICIO: transporte-service
+    image: flety/transporte-service:latest
+    container_name: flety-transporte
+    networks:
+      - flety-net
+
+  cargas-service:
+    build:
+      context: .
+      args:
+        SERVICIO: cargas-service
+    image: flety/cargas-service:latest
+    container_name: flety-cargas
+    networks:
+      - flety-net
+
+  # El gateway es la FLY-14 y todavía no está en el repo: queda detrás del profile "gateway" para que
+  # docker compose up no falle buscando la carpeta. Cuando exista gateway-service/, se levanta con
+  #   docker compose --profile gateway up -d
+  # y al terminar la FLY-14 se le saca el profile.
+  gateway-service:
+    profiles: ["gateway"]
+    build:
+      context: .
+      args:
+        SERVICIO: gateway-service
+    image: flety/gateway-service:latest
+    container_name: flety-gateway
+    networks:
+      - flety-net
+
 volumes:
   postgres-data:
 
