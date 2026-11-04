@@ -144,9 +144,42 @@ public class Viaje {
         eventos.add(new EventoViaje(this, null, TipoEstadoViaje.CONFIRMADO, actorSub, null));
     }
 
+    // Patrón State (FLY-27): cada acción se delega en el objeto del estado actual, que decide si la permite y a
+    // qué estado pasa. Si no la permite, lanza TransicionNoPermitidaException (409) y el viaje queda como estaba.
+    // Viaje no tiene ni un if sobre su estado: agregar o cambiar una transición se hace en la clase del estado.
+
+    public void cargar(String actorSub) {
+        estadoActual().cargar(this, actorSub);
+    }
+
+    public void iniciarTransito(String actorSub) {
+        estadoActual().iniciarTransito(this, actorSub);
+    }
+
+    public void registrarEntrega(DatosEntrega entrega, String actorSub) {
+        estadoActual().registrarEntrega(this, entrega, actorSub);
+    }
+
+    public void conformar(ConformadoPor por, String actorSub) {
+        estadoActual().conformar(this, por, actorSub);
+    }
+
+    public void disputar(String motivo, String descripcion, String actorSub) {
+        estadoActual().disputar(this, motivo, descripcion, actorSub);
+    }
+
+    public void cancelar(String motivo, String actorSub) {
+        estadoActual().cancelar(this, motivo, actorSub);
+    }
+
+    /** Se resuelve en cada llamada a partir del enum guardado: no hay un segundo campo que pueda desincronizarse. */
+    private EstadoViaje estadoActual() {
+        return EstadosViaje.de(estado);
+    }
+
     /**
-     * El único camino para cambiar el estado. No valida si la transición está permitida: eso lo decide
-     * cada clase de estado del patrón State (FLY-27) antes de llamar acá.
+     * El único camino para cambiar el estado, y siempre deja un EventoViaje. No valida si la transición está
+     * permitida: eso ya lo decidió la clase de estado que llama acá (por eso es del paquete y no pública).
      */
     void cambiarEstado(TipoEstadoViaje nuevo, String actorSub, String detalle) {
         eventos.add(new EventoViaje(this, estado, nuevo, actorSub, detalle));
