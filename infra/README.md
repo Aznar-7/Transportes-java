@@ -56,6 +56,22 @@ Al arrancar importa el realm de [`keycloak/flety-realm.json`](keycloak/flety-rea
 - El realm se vuelve a importar en cada arranque: lo que se cambie a mano en la consola se pierde. Los cambios permanentes van al JSON.
 - El emisor (`iss`) de los tokens es siempre `http://localhost:8081/realms/flety`, aunque el token se pida desde adentro de la red de Docker.
 
+## Imágenes de los servicios
+
+Hay un solo [`Dockerfile`](../Dockerfile), en la raíz, que sirve de plantilla para todos los servicios: cambia solo el argumento `SERVICIO`, que es la carpeta del módulo.
+
+```bash
+docker build --build-arg SERVICIO=cargas-service -t flety/cargas-service .
+docker build --build-arg SERVICIO=transporte-service -t flety/transporte-service .
+```
+
+- **Multi-stage.** La etapa `build` (Maven + JDK) compila y la etapa final copia solo el JAR sobre una imagen con el JRE. Con cargas-service, la etapa de compilación pesa 1,03 GB y la imagen final 568 MB: Maven, el código y las dependencias de compilación no viajan.
+- **flety-commons primero.** La librería común no está publicada en ningún repositorio Maven: la imagen la instala (`mvn install`) antes de compilar el servicio que la usa.
+- **El contexto es la raíz del repo**, porque hacen falta dos carpetas: `flety-commons` y la del servicio. El [`.dockerignore`](../.dockerignore) es una lista de lo que sí entra; el `.env`, el `.git` y los `target/` nunca llegan al build.
+- **Caché de Maven.** Las dependencias se guardan en un cache mount de BuildKit: se bajan una vez y los builds siguientes tardan segundos.
+- **Usuario sin privilegios.** El servicio corre como `flety`, no como root.
+- **Los tests no corren en el build:** se corren antes, con `mvn test`.
+
 ## Bajar y empezar de cero
 
 ```bash
