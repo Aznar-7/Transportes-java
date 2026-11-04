@@ -3,6 +3,7 @@ package com.flety.cargas.viajes;
 import com.flety.cargas.mercado.Carga;
 import com.flety.cargas.mercado.CargaRepository;
 import com.flety.cargas.mercado.EstadoCarga;
+import com.flety.cargas.mercado.EstadoPropuesta;
 import com.flety.cargas.mercado.Propuesta;
 import com.flety.cargas.mercado.PropuestaRepository;
 import com.flety.cargas.mercado.TipoPropuesta;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Fixture de viajes para los tests: arma la carga y la propuesta aceptada, y crea el viaje como lo hará FLY-26.
@@ -36,8 +38,53 @@ public class ViajesDePrueba {
         return new Fixture(cargas, propuestas, viajes, tx);
     }
 
+    /**
+     * La base H2 se comparte entre todas las clases de test. Cada test que acepta propuestas usa una unidad propia
+     * para que el control de superposición (RN-15) no choque con los viajes que dejaron otros tests.
+     */
+    private static final AtomicLong UNIDADES = new AtomicLong(10_000);
+
+    public static Long unidadNueva() {
+        return UNIDADES.incrementAndGet();
+    }
+
     public record Fixture(CargaRepository cargas, PropuestaRepository propuestas, ViajeRepository viajes,
                           TransactionTemplate tx) {
+
+        /** Carga de dador1 que todavía recibe propuestas: carga en cargaDesde, descarga hasta cargaDesde + 2 días. */
+        public Carga cargaAbierta(Instant cargaDesde) {
+            Carga carga = nuevaCarga(cargaDesde);
+            carga.setEstado(EstadoCarga.CON_PROPUESTAS);
+            return cargas.save(carga);
+        }
+
+        public Carga cargaAbierta() {
+            return cargaAbierta(Instant.now().plus(1, ChronoUnit.DAYS));
+        }
+
+        /** Propuesta PENDIENTE de un transportista para la carga, con la unidad indicada. */
+        public Propuesta propuestaPendiente(Carga carga, Long unidadId, String transportistaSub) {
+            Propuesta propuesta = nuevaPropuesta(carga, unidadId);
+            propuesta.setTransportistaSub(transportistaSub);
+            return propuestas.save(propuesta);
+        }
+
+        public Propuesta propuestaPendiente(Carga carga, Long unidadId) {
+            return propuestaPendiente(carga, unidadId, SUB_TRANSPORTISTA);
+        }
+
+        public EstadoCarga estadoDeCarga(Long cargaId) {
+            return cargas.findById(cargaId).orElseThrow().getEstado();
+        }
+
+        public EstadoPropuesta estadoDePropuesta(Long propuestaId) {
+            return propuestas.findById(propuestaId).orElseThrow().getEstado();
+        }
+
+        /** El viaje leído en una transacción, para poder mirar sus eventos (LAZY) desde el test. */
+        public <T> T conViaje(Long viajeId, java.util.function.Function<Viaje, T> lectura) {
+            return tx.execute(t -> lectura.apply(viajes.findById(viajeId).orElseThrow()));
+        }
 
         /** Viaje CONFIRMADO entre dador1 y transportista1, con la unidad 10 y la carga mañana. */
         public Viaje viajeConfirmado() {
