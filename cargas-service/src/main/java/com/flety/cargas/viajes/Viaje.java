@@ -115,6 +115,15 @@ public class Viaje {
     @Enumerated(EnumType.STRING)
     private ConformadoPor conformadoPor;
 
+    /** Los completa la cancelación (marcarCancelado, FLY-28); quedan en null mientras el viaje siga en pie. */
+    @Enumerated(EnumType.STRING)
+    private ParteDelViaje canceladoPor;
+
+    private Instant canceladoEn;
+
+    @Column(length = 500)
+    private String motivoCancelacion;
+
     @Column(nullable = false, updatable = false)
     private Instant creadoEn;
 
@@ -195,6 +204,30 @@ public class Viaje {
         this.ventanaConformidadHasta = entregadoEn.plus(VENTANA_CONFORMIDAD);
         cambiarEstado(TipoEstadoViaje.ENTREGADO, actorSub,
                 "Remito " + entrega.numeroRemito() + ", recibió " + entrega.recibioNombre());
+    }
+
+    /**
+     * Lo llama Confirmado al cancelar: guarda quién canceló, cuándo y por qué, y deja el evento con el motivo.
+     */
+    void marcarCancelado(String motivo, String actorSub) {
+        this.canceladoPor = parteDe(actorSub);
+        this.canceladoEn = Instant.now();
+        this.motivoCancelacion = motivo;
+        cambiarEstado(TipoEstadoViaje.CANCELADO, actorSub, "Canceló el " + canceladoPor + ": " + motivo);
+    }
+
+    /**
+     * Qué parte del viaje es ese sub. Quien no es parte no llega acá (el service responde 403 antes); si llegara,
+     * se corta en vez de anotar una cancelación a nombre de nadie.
+     */
+    public ParteDelViaje parteDe(String sub) {
+        if (dadorSub.equals(sub)) {
+            return ParteDelViaje.DADOR;
+        }
+        if (transportistaSub.equals(sub)) {
+            return ParteDelViaje.TRANSPORTISTA;
+        }
+        throw new IllegalArgumentException("El usuario " + sub + " no es parte del viaje " + id);
     }
 
     /**
