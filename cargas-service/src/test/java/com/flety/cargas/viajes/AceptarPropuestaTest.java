@@ -1,6 +1,8 @@
 package com.flety.cargas.viajes;
 
 import com.flety.cargas.TokensDePrueba;
+import com.flety.cargas.TransporteDePrueba;
+import com.flety.cargas.transporte.TransporteClientFake;
 import com.flety.cargas.mercado.Carga;
 import com.flety.cargas.mercado.EstadoCarga;
 import com.flety.cargas.mercado.EstadoPropuesta;
@@ -20,6 +22,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -28,12 +31,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * POST /api/cargas/propuestas/{id}/aceptacion con la cadena de seguridad real. Las cargas y propuestas salen
- * del fixture, así el test no depende de que mercado (Heron) ya publique cargas y propuestas.
+ * del fixture, así el test no depende de que mercado (Heron) ya publique cargas y propuestas, y la habilitación
+ * de la unidad sale del fake de TransporteClient, así no hace falta transporte-service.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TokensDePrueba.class, ViajesDePrueba.class})
+@Import({TokensDePrueba.class, ViajesDePrueba.class, TransporteDePrueba.class})
 class AceptarPropuestaTest {
 
     @Autowired
@@ -42,11 +46,14 @@ class AceptarPropuestaTest {
     @Autowired
     ViajesDePrueba.Fixture fixture;
 
+    @Autowired
+    TransporteClientFake transporte;
+
     @Test
     void creaElViajeConfirmadoAsignaLaCargaYRechazaLasDemas() throws Exception {
         Carga carga = fixture.cargaAbierta();
-        Propuesta elegida = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
-        Propuesta otra = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva(), ViajesDePrueba.SUB_TERCERO);
+        Propuesta elegida = propuestaHabilitada(carga);
+        Propuesta otra = propuestaHabilitada(carga, ViajesDePrueba.SUB_TERCERO);
 
         MvcResult resultado = aceptar(elegida.getId(), TokensDePrueba.DADOR)
                 .andExpect(status().isCreated())
@@ -70,7 +77,7 @@ class AceptarPropuestaTest {
     @Test
     void otroDadorRecibe403YNoCambiaNada() throws Exception {
         Carga carga = fixture.cargaAbierta();
-        Propuesta propuesta = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
+        Propuesta propuesta = propuestaHabilitada(carga);
 
         aceptar(propuesta.getId(), TokensDePrueba.OTRO_DADOR)
                 .andExpect(status().isForbidden())
@@ -82,7 +89,7 @@ class AceptarPropuestaTest {
 
     @Test
     void unTransportistaNoPuedeAceptar() throws Exception {
-        Propuesta propuesta = fixture.propuestaPendiente(fixture.cargaAbierta(), ViajesDePrueba.unidadNueva());
+        Propuesta propuesta = propuestaHabilitada(fixture.cargaAbierta());
 
         aceptar(propuesta.getId(), TokensDePrueba.TRANSPORTISTA)
                 .andExpect(status().isForbidden())
@@ -91,7 +98,7 @@ class AceptarPropuestaTest {
 
     @Test
     void aceptarDosVecesLaMismaDa409() throws Exception {
-        Propuesta propuesta = fixture.propuestaPendiente(fixture.cargaAbierta(), ViajesDePrueba.unidadNueva());
+        Propuesta propuesta = propuestaHabilitada(fixture.cargaAbierta());
 
         aceptar(propuesta.getId(), TokensDePrueba.DADOR).andExpect(status().isCreated());
         aceptar(propuesta.getId(), TokensDePrueba.DADOR)
@@ -102,8 +109,8 @@ class AceptarPropuestaTest {
     @Test
     void unaRechazadaPorHaberAceptadoOtraDa409() throws Exception {
         Carga carga = fixture.cargaAbierta();
-        Propuesta primera = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
-        Propuesta segunda = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva(), ViajesDePrueba.SUB_TERCERO);
+        Propuesta primera = propuestaHabilitada(carga);
+        Propuesta segunda = propuestaHabilitada(carga, ViajesDePrueba.SUB_TERCERO);
 
         aceptar(primera.getId(), TokensDePrueba.DADOR).andExpect(status().isCreated());
         aceptar(segunda.getId(), TokensDePrueba.DADOR)
@@ -114,7 +121,7 @@ class AceptarPropuestaTest {
     @Test
     void conRiesgoSinAceptarloDa422YAceptandoloPasa() throws Exception {
         Carga carga = fixture.cargaAbierta();
-        Propuesta propuesta = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
+        Propuesta propuesta = propuestaHabilitada(carga);
         propuesta.setRequiereAceptacionRiesgo(true);
         fixture.propuestas().save(propuesta);
 
@@ -133,7 +140,7 @@ class AceptarPropuestaTest {
     @Test
     void unaPropuestaVencidaDa409() throws Exception {
         Carga carga = fixture.cargaAbierta();
-        Propuesta propuesta = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
+        Propuesta propuesta = propuestaHabilitada(carga);
         propuesta.setVencimiento(Instant.now().minus(1, ChronoUnit.HOURS));
         fixture.propuestas().save(propuesta);
 
@@ -143,9 +150,54 @@ class AceptarPropuestaTest {
     }
 
     @Test
+    void copiaEnElViajeLosDatosDelTransportistaQueDaTransporte() throws Exception {
+        Propuesta propuesta = propuestaHabilitada(fixture.cargaAbierta());
+
+        MvcResult resultado = aceptar(propuesta.getId(), TokensDePrueba.DADOR)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.contactos.transportista.nombre").value("Transportes Pérez SRL"))
+                .andExpect(jsonPath("$.contactos.transportista.telefono").value("+54 351 555-1234"))
+                .andExpect(jsonPath("$.contactos.unidadDominio").value("AB123CD"))
+                // Hasta que exista la entidad Dador (FLY-19) no hay de dónde copiar su contacto.
+                .andExpect(jsonPath("$.contactos.dador").value(nullValue()))
+                .andReturn();
+
+        Long viajeId = idDelViaje(resultado);
+        String guardado = fixture.conViaje(viajeId, v -> v.getContactoTransportista().getNombre());
+        assertThat(guardado).isEqualTo("Transportes Pérez SRL");
+    }
+
+    @Test
+    void conTransporteCaidoDa503YNoConfirmaNada() throws Exception {
+        Carga carga = fixture.cargaAbierta();
+        Propuesta propuesta = propuestaHabilitada(carga);
+        transporte.simularCaida(true);
+        try {
+            aceptar(propuesta.getId(), TokensDePrueba.DADOR)
+                    .andExpect(status().isServiceUnavailable());
+        } finally {
+            transporte.simularCaida(false);
+        }
+
+        assertThat(fixture.estadoDePropuesta(propuesta.getId())).isEqualTo(EstadoPropuesta.PENDIENTE);
+        assertThat(fixture.estadoDeCarga(carga.getId())).isEqualTo(EstadoCarga.CON_PROPUESTAS);
+    }
+
+    @Test
     void unaPropuestaQueNoExisteDa404() throws Exception {
         aceptar(999_999L, TokensDePrueba.DADOR)
                 .andExpect(status().isNotFound());
+    }
+
+    /** Propuesta pendiente con una unidad propia, que el fake de transporte informa como habilitada. */
+    Propuesta propuestaHabilitada(Carga carga, String transportistaSub) {
+        Long unidadId = ViajesDePrueba.unidadNueva();
+        transporte.conHabilitacion(TransporteDePrueba.habilitada(unidadId));
+        return fixture.propuestaPendiente(carga, unidadId, transportistaSub);
+    }
+
+    Propuesta propuestaHabilitada(Carga carga) {
+        return propuestaHabilitada(carga, ViajesDePrueba.SUB_TRANSPORTISTA);
     }
 
     org.springframework.test.web.servlet.ResultActions aceptar(Long propuestaId, String token) throws Exception {

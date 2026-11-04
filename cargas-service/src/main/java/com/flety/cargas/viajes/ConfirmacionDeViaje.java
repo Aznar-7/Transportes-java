@@ -4,6 +4,7 @@ import com.flety.cargas.mercado.Carga;
 import com.flety.cargas.mercado.EstadoCarga;
 import com.flety.cargas.mercado.EstadoPropuesta;
 import com.flety.cargas.mercado.Propuesta;
+import com.flety.commons.contrato.HabilitacionUnidadDTO;
 import com.flety.commons.excepciones.AccesoDenegadoException;
 import com.flety.commons.excepciones.ConflictoException;
 import com.flety.commons.excepciones.RecursoNoEncontradoException;
@@ -68,15 +69,22 @@ public class ConfirmacionDeViaje {
      * Vuelve a validar el estado porque entre preparar y confirmar pasó la llamada a transporte-service
      * y otro pedido pudo haber aceptado otra propuesta de la misma carga.
      *
+     * @param habilitacion lo que respondió transporte-service sobre la unidad: de ahí salen los datos del
+     *                     transportista que se copian en el viaje
      * @return el id del viaje creado
      */
     @Transactional
-    public Long confirmar(Long propuestaId, String dadorSub) {
+    public Long confirmar(Long propuestaId, String dadorSub, HabilitacionUnidadDTO habilitacion) {
         Propuesta propuesta = buscar(propuestaId);
         Carga carga = propuesta.getCarga();
         validarQueSigueAbierta(propuesta, carga);
 
-        Viaje viaje = new Viaje(carga, propuesta, null, null, null, dadorSub);
+        // Copia, no referencia: el transportista vive en otra base y el viaje tiene que mostrar con quién se
+        // acordó y con qué camión, aunque después cambie su teléfono o la unidad cambie de patente.
+        Contacto transportista = new Contacto(habilitacion.transportistaRazonSocial(),
+                habilitacion.transportistaTelefono());
+        // El contacto del dador queda vacío hasta que mercado tenga la entidad Dador (FLY-19, Heron).
+        Viaje viaje = new Viaje(carga, propuesta, habilitacion.dominio(), transportista, null, dadorSub);
 
         propuesta.setEstado(EstadoPropuesta.ACEPTADA);
         propuestas.findByCargaIdAndEstado(carga.getId(), EstadoPropuesta.PENDIENTE).stream()
