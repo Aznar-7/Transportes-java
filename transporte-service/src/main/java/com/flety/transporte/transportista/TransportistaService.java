@@ -34,8 +34,13 @@ public class TransportistaService {
 
     @Transactional(readOnly = true)
     public TransportistaResponse buscarPropio() {
+        return TransportistaResponse.desde(propio());
+    }
+
+    /** La organización del usuario actual, para los módulos que cuelgan de ella (unidades, retornos). */
+    @Transactional(readOnly = true)
+    public Transportista propio() {
         return repository.findByOwnerSub(usuarioActual.id())
-                .map(TransportistaResponse::desde)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Todavía no registraste tu organización"));
     }
 }
