@@ -27,7 +27,7 @@ class TransportistaControllerTest {
 
     private static final String URL = "/api/transporte/transportistas";
     private static final String PEREZ = """
-            {"cuit": "30712345678", "razonSocial": "Transportes Pérez SRL", "telefono": "+5493514445566"}
+            {"cuit": "30546671166", "razonSocial": "Transportes Pérez SRL", "telefono": "+5493514445566"}
             """;
 
     @Autowired
@@ -50,12 +50,12 @@ class TransportistaControllerTest {
 
     @Test
     void conCuitExistenteDevuelve409() throws Exception {
-        repository.save(new Transportista("sub-otro", "30712345678", "Otra SRL", "3514440000"));
+        repository.save(new Transportista("sub-otro", "30546671166", "Otra SRL", "3514440000"));
 
         mockMvc.perform(post(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA)
                         .contentType(MediaType.APPLICATION_JSON).content(PEREZ))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("Ya existe un transportista con CUIT 30712345678"));
+                .andExpect(jsonPath("$.detail").value("Ya existe un transportista con CUIT 30546671166"));
     }
 
     @Test
@@ -79,6 +79,15 @@ class TransportistaControllerTest {
     }
 
     @Test
+    void conCuitInvalidoPorDigitoVerificadorDevuelve400() throws Exception {
+        mockMvc.perform(post(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"cuit\": \"30712345678\", \"razonSocial\": \"Transportes Pérez SRL\", \"telefono\": \"+5493514445566\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.cuit").exists());
+    }
+
+    @Test
     void sinTokenDevuelve401() throws Exception {
         mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(PEREZ))
                 .andExpect(status().isUnauthorized());
@@ -86,11 +95,11 @@ class TransportistaControllerTest {
 
     @Test
     void meDevuelveMisDatos() throws Exception {
-        repository.save(new Transportista("sub-transportista1", "30712345678", "Transportes Pérez SRL", "+5493514445566"));
+        repository.save(new Transportista("sub-transportista1", "30546671166", "Transportes Pérez SRL", "+5493514445566"));
 
         mockMvc.perform(get(URL + "/me").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.cuit").value("30712345678"))
+                .andExpect(jsonPath("$.cuit").value("30546671166"))
                 .andExpect(jsonPath("$.razonSocial").value("Transportes Pérez SRL"));
     }
 
