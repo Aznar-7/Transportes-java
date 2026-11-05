@@ -37,6 +37,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
         </dependency>
+        <!-- RestClient y RestClientCustomizer para llamadas entre microservicios (FLY-35). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
         <!-- Trae las excepciones de acceso a datos de Spring (DataIntegrityViolation, OptimisticLockingFailure). -->
         <dependency>
             <groupId>org.springframework</groupId>
