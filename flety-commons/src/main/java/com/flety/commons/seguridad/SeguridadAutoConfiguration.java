@@ -2,10 +2,12 @@ package com.flety.commons.seguridad;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.restclient.RestClientCustomizer;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.boot.security.oauth2.server.resource.autoconfigure.web.OAuth2ResourceServerWebSecurityAutoConfiguration;
@@ -44,6 +46,21 @@ public class SeguridadAutoConfiguration {
     @ConditionalOnMissingBean
     public UsuarioActual usuarioActual() {
         return new UsuarioActual();
+    }
+
+    /** Interceptor que reenvía el token JWT del usuario actual en llamadas HTTP salientes (FLY-35). */
+    @Bean
+    @ConditionalOnMissingBean
+    public ReenvioTokenInterceptor reenvioTokenInterceptor() {
+        return new ReenvioTokenInterceptor();
+    }
+
+    /** Configura RestClient.Builder para registrar el interceptor de reenvío de token automáticamente. */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnClass(RestClientCustomizer.class)
+    public RestClientCustomizer reenvioTokenRestClientCustomizer(ReenvioTokenInterceptor interceptor) {
+        return builder -> builder.requestInterceptor(interceptor);
     }
 
     @Bean
