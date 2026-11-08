@@ -1,6 +1,7 @@
 package com.flety.cargas.viajes;
 
 import com.flety.cargas.mercado.Carga;
+import com.flety.cargas.mercado.DadorRepository;
 import com.flety.cargas.mercado.EstadoCarga;
 import com.flety.cargas.mercado.EstadoPropuesta;
 import com.flety.cargas.mercado.Propuesta;
@@ -38,13 +39,15 @@ public class ConfirmacionDeViaje {
     private final PropuestasDeViajes propuestas;
     private final ViajeRepository viajes;
     private final ViajesActivosPorUnidad viajesActivos;
+    private final DadorRepository dadores;
 
     public ConfirmacionDeViaje(CargasDeViajes cargas, PropuestasDeViajes propuestas, ViajeRepository viajes,
-                               ViajesActivosPorUnidad viajesActivos) {
+                               ViajesActivosPorUnidad viajesActivos, DadorRepository dadores) {
         this.cargas = cargas;
         this.propuestas = propuestas;
         this.viajes = viajes;
         this.viajesActivos = viajesActivos;
+        this.dadores = dadores;
     }
 
     /** Lo que el orquestador necesita saber de la propuesta antes de llamar a transporte-service y confirmar. */
@@ -103,8 +106,12 @@ public class ConfirmacionDeViaje {
         // acordó y con qué camión, aunque después cambie su teléfono o la unidad cambie de patente.
         Contacto transportista = new Contacto(habilitacion.transportistaRazonSocial(),
                 habilitacion.transportistaTelefono());
-        // El contacto del dador queda vacío hasta que mercado tenga la entidad Dador (FLY-19, Heron).
-        Viaje viaje = new Viaje(carga, propuesta, habilitacion.dominio(), transportista, null, dadorSub);
+        // Para publicar hay que tener la organización registrada (RN-07), así que toda carga nueva la tiene.
+        // Una carga publicada antes de esa regla queda sin contacto del dador: eso no frena la aceptación.
+        Contacto dador = dadores.findByOwnerSub(dadorSub)
+                .map(organizacion -> new Contacto(organizacion.getRazonSocial(), organizacion.getTelefono()))
+                .orElse(null);
+        Viaje viaje = new Viaje(carga, propuesta, habilitacion.dominio(), transportista, dador, dadorSub);
 
         propuesta.setEstado(EstadoPropuesta.ACEPTADA);
         propuestas.findByCargaIdAndEstado(carga.getId(), EstadoPropuesta.PENDIENTE).stream()
