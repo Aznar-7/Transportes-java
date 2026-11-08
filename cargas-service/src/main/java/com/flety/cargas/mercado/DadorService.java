@@ -3,6 +3,7 @@ package com.flety.cargas.mercado;
 import com.flety.cargas.mercado.dto.AltaDadorRequest;
 import com.flety.cargas.mercado.dto.DadorResponse;
 import com.flety.commons.excepciones.ConflictoException;
+import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.seguridad.UsuarioActual;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,5 +34,12 @@ public class DadorService {
         }
         Dador nuevo = new Dador(ownerSub, pedido.cuit(), pedido.razonSocial(), pedido.telefono(), pedido.declaraEmpresa());
         return DadorResponse.desde(repository.save(nuevo));
+    }
+
+    @Transactional(readOnly = true)
+    public DadorResponse buscarPropio() {
+        Dador propio = repository.findByOwnerSub(usuarioActual.id())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Todavía no registraste tu organización"));
+        return DadorResponse.desde(propio);
     }
 }

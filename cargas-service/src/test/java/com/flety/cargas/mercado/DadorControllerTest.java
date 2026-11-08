@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -105,5 +106,30 @@ class DadorControllerTest {
         mockMvc.perform(post(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA)
                         .contentType(MediaType.APPLICATION_JSON).content(ACME))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void meDevuelveMisDatos() throws Exception {
+        repository.save(new Dador("sub-dador1", "30546671166", "Acme SA", "+5493514445566", true));
+
+        mockMvc.perform(get(URL + "/me").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cuit").value("30546671166"))
+                .andExpect(jsonPath("$.razonSocial").value("Acme SA"))
+                .andExpect(jsonPath("$.ownerSub").doesNotExist());
+    }
+
+    @Test
+    void meNoDevuelveLaOrganizacionDeOtroDador() throws Exception {
+        repository.save(new Dador("sub-dador1", "30546671166", "Acme SA", "+5493514445566", true));
+
+        mockMvc.perform(get(URL + "/me").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.OTRO_DADOR))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void meSinOrganizacionDevuelve404() throws Exception {
+        mockMvc.perform(get(URL + "/me").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isNotFound());
     }
 }
