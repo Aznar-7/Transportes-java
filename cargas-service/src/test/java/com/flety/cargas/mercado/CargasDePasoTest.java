@@ -142,6 +142,39 @@ class CargasDePasoTest {
     }
 
     @Test
+    void unaCargaLejosDeLaRutaNoPasaElPrefiltro() throws Exception {
+        Long cerca = cargas.save(cargaCompatible()).getId();
+        Carga retiroLejos = cargaCompatible();
+        retiroLejos.setOrigen(new Ubicacion("Mendoza", "Mendoza", -32.8895, -68.8458, "San Martín 100"));
+        Long retiroLejosId = cargas.save(retiroLejos).getId();
+        Carga entregaLejos = cargaCompatible();
+        entregaLejos.setDestino(new Ubicacion("Tucumán", "San Miguel de Tucumán", -26.8083, -65.2176, "Mate de Luna 1"));
+        Long entregaLejosId = cargas.save(entregaLejos).getId();
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(cerca.intValue())))
+                .andExpect(jsonPath("$[*].id", not(hasItem(retiroLejosId.intValue()))))
+                .andExpect(jsonPath("$[*].id", not(hasItem(entregaLejosId.intValue()))));
+    }
+
+    /** Córdoba está en -31.42: la caja llega hasta 30 km más al norte (-31.15), o 60 km si la ruta es aproximada. */
+    @Test
+    void conRutaAproximadaElCorredorEsMasAncho() throws Exception {
+        Carga fueraDelCorredorNormal = cargaCompatible();
+        fueraDelCorredorNormal.setOrigen(new Ubicacion("Córdoba", "Jesús María", -31.00, -63.50, "Ruta 9 km 760"));
+        Long id = cargas.save(fueraDelCorredorNormal).getId();
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", not(hasItem(id.intValue()))));
+
+        buscar(retorno("PUBLICADO", List.of(ROSARIO, CORDOBA), true))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(id.intValue())));
+    }
+
+    @Test
     void unRetornoQueYaNoEstaPublicadoDevuelve409() throws Exception {
         buscar(retorno("VENCIDO"))
                 .andExpect(status().isConflict())
@@ -173,12 +206,16 @@ class CargasDePasoTest {
 
     /** Retorno de Rosario a Córdoba con una unidad SIDER de 28 t y 90 m³: sale en una ventana de 12 h. */
     private Long retorno(String estado) {
+        return retorno(estado, List.of(ROSARIO, VILLA_MARIA, CORDOBA), false);
+    }
+
+    private Long retorno(String estado, List<Coordenada> ruta, boolean rutaAproximada) {
         Long id = RETORNOS.incrementAndGet();
         transporte.conRetorno(new RetornoInternoDTO(id, 3L, 12L, estado,
                 new UbicacionDTO("Santa Fe", "Rosario", ROSARIO.lat(), ROSARIO.lng()),
                 new UbicacionDTO("Córdoba", "Córdoba", CORDOBA.lat(), CORDOBA.lng()),
                 SALIDA, SALIDA.plus(12, ChronoUnit.HOURS), 30.0, 401.5, 290.0,
-                List.of(ROSARIO, VILLA_MARIA, CORDOBA), false, TipoCarroceria.SIDER,
+                ruta, rutaAproximada, TipoCarroceria.SIDER,
                 new BigDecimal("28.00"), new BigDecimal("90.00")));
         return id;
     }

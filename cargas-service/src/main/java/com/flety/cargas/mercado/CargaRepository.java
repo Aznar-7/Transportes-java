@@ -16,6 +16,8 @@ public interface CargaRepository extends JpaRepository<Carga, Long>, JpaSpecific
     /**
      * El paso barato de la búsqueda (RN-01): lo que se puede decidir en la base, sin llamar a ninguna API.
      * Las ventanas se pisan si cada una empieza antes de que termine la otra.
+     * El retiro y la entrega tienen que caer dentro de la caja alrededor de la ruta: si uno queda afuera, el desvío
+     * ya supera el máximo y no vale la pena gastar una llamada a la API de rutas.
      * El join fetch trae las carrocerías en la misma consulta, en vez de un SELECT más por cada carga.
      */
     @Query("""
@@ -24,7 +26,10 @@ public interface CargaRepository extends JpaRepository<Carga, Long>, JpaSpecific
               and c.cargaDesde <= :salidaHasta and c.cargaHasta >= :salidaDesde
               and :carroceria member of c.carroceriasAceptadas
               and c.pesoToneladas <= :capacidadToneladas and c.volumenM3 <= :capacidadM3
+              and c.origen.lat between :latMin and :latMax and c.origen.lng between :lonMin and :lonMax
+              and c.destino.lat between :latMin and :latMax and c.destino.lng between :lonMin and :lonMax
             """)
     List<Carga> buscarCandidatas(Collection<EstadoCarga> estados, Instant salidaDesde, Instant salidaHasta,
-                                 TipoCarroceria carroceria, BigDecimal capacidadToneladas, BigDecimal capacidadM3);
+                                 TipoCarroceria carroceria, BigDecimal capacidadToneladas, BigDecimal capacidadM3,
+                                 double latMin, double latMax, double lonMin, double lonMax);
 }
