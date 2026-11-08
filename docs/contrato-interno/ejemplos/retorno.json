@@ -1,6 +1,7 @@
 {
   "id": 7,
   "transportistaId": 3,
+  "transportistaSub": "sub-transportista1",
   "unidadId": 12,
   "estado": "PUBLICADO",
   "origen": { "provincia": "Santa Fe", "localidad": "Rosario", "lat": -32.9468, "lng": -60.6393 },

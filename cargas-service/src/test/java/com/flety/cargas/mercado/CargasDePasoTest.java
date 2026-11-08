@@ -305,6 +305,14 @@ class CargasDePasoTest {
     }
 
     @Test
+    void otroTransportistaNoPuedeBuscarConMiRetorno() throws Exception {
+        mockMvc.perform(get("/api/cargas/de-paso").param("retornoId", retorno("PUBLICADO").toString())
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TERCERO))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value("Este retorno no es tuyo"));
+    }
+
+    @Test
     void sinRetornoIdDevuelve400() throws Exception {
         mockMvc.perform(get("/api/cargas/de-paso").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
                 .andExpect(status().isBadRequest());
@@ -335,7 +343,7 @@ class CargasDePasoTest {
                 new UbicacionDTO("Córdoba", "Córdoba", CORDOBA.lat(), CORDOBA.lng()),
                 SALIDA, SALIDA.plus(12, ChronoUnit.HOURS), 30.0, 401.5, 290.0,
                 ruta, rutaAproximada, TipoCarroceria.SIDER,
-                new BigDecimal("28.00"), new BigDecimal("90.00")));
+                new BigDecimal("28.00"), new BigDecimal("90.00"), "sub-transportista1"));
         return id;
     }
 

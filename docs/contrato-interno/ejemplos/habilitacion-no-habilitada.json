@@ -12,6 +12,7 @@
   "capacidadM3": 90.0,
   "sumaAseguradaCarga": null,
   "transportistaId": 3,
+  "transportistaSub": "sub-transportista1",
   "transportistaRazonSocial": "Transportes Pérez SRL",
   "transportistaTelefono": "+5493514445566"
 }

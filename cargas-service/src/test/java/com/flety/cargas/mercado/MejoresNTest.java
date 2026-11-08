@@ -68,7 +68,7 @@ class MejoresNTest {
                 new UbicacionDTO("Córdoba", "Córdoba", CORDOBA.lat(), CORDOBA.lng()),
                 SALIDA, SALIDA.plus(12, ChronoUnit.HOURS), 30.0, 401.5, 290.0,
                 List.of(ROSARIO, VILLA_MARIA, CORDOBA), false, TipoCarroceria.SIDER,
-                new BigDecimal("28.00"), new BigDecimal("90.00")));
+                new BigDecimal("28.00"), new BigDecimal("90.00"), "sub-transportista1"));
 
         mockMvc.perform(get("/api/cargas/de-paso").param("retornoId", "5000")
                         .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))

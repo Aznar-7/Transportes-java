@@ -5,7 +5,7 @@ info:
   description: |
     Endpoints que cargas-service consume de transporte-service (sección 5 del diseño).
     No pasan por el Gateway: solo se llega desde la red de Docker.
-    Exigen un token válido (se reenvía el del usuario) pero no verifican dueño.
+    Exigen un token válido (se reenvía el del usuario) pero no verifican dueño: devuelven el transportistaSub y lo controla cargas-service.
     Los cuerpos son los records HabilitacionUnidadDTO y RetornoInternoDTO de flety-commons.
     Regla del M0: este contrato solo puede cambiar agregando campos.
 servers:
@@ -109,7 +109,7 @@ components:
 
     HabilitacionUnidadDTO:
       type: object
-      required: [unidadId, habilitada, motivos, dominio, tipoCarroceria, capacidadToneladas, capacidadM3, transportistaId, transportistaRazonSocial, transportistaTelefono]
+      required: [unidadId, habilitada, motivos, dominio, tipoCarroceria, capacidadToneladas, capacidadM3, transportistaId, transportistaRazonSocial, transportistaTelefono, transportistaSub]
       properties:
         unidadId: { type: integer, format: int64 }
         habilitada: { type: boolean, description: Transportista VERIFICADO y documentos obligatorios APROBADO y vigentes hasta `hasta` }
@@ -120,15 +120,17 @@ components:
         capacidadM3: { type: number }
         sumaAseguradaCarga: { type: [number, "null"], description: Suma asegurada de la póliza de carga aprobada; null si no tiene (RN-06) }
         transportistaId: { type: integer, format: int64 }
+        transportistaSub: { type: string, description: sub del JWT del transportista dueño; cargas-service lo compara con el token (RN-T1) }
         transportistaRazonSocial: { type: string }
         transportistaTelefono: { type: string }
 
     RetornoInternoDTO:
       type: object
-      required: [id, transportistaId, unidadId, estado, origen, destino, salidaDesde, salidaHasta, desvioMaximoKm, rutaDistanciaKm, rutaDuracionMin, rutaPuntos, rutaAproximada, tipoCarroceria, capacidadToneladas, capacidadM3]
+      required: [id, transportistaId, unidadId, estado, origen, destino, salidaDesde, salidaHasta, desvioMaximoKm, rutaDistanciaKm, rutaDuracionMin, rutaPuntos, rutaAproximada, tipoCarroceria, capacidadToneladas, capacidadM3, transportistaSub]
       properties:
         id: { type: integer, format: int64 }
         transportistaId: { type: integer, format: int64 }
+        transportistaSub: { type: string, description: sub del JWT del transportista dueño; cargas-service lo compara con el token (RN-T1) }
         unidadId: { type: integer, format: int64 }
         estado: { type: string, enum: [PUBLICADO, VENCIDO, CANCELADO] }
         origen: { $ref: "#/components/schemas/Ubicacion" }
