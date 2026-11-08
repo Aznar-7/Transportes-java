@@ -4,12 +4,14 @@ import com.flety.cargas.mercado.dto.CargaDePasoResponse;
 import com.flety.cargas.transporte.TransporteClient;
 import com.flety.commons.contrato.RetornoInternoDTO;
 import com.flety.commons.contrato.UbicacionDTO;
+import com.flety.commons.excepciones.AccesoDenegadoException;
 import com.flety.commons.excepciones.ConflictoException;
 import com.flety.commons.geo.CajaGeografica;
 import com.flety.commons.geo.CalculadorDesvio;
 import com.flety.commons.geo.Coordenada;
 import com.flety.commons.geo.GeoUtils;
 import com.flety.commons.geo.ResultadoDesvio;
+import com.flety.commons.seguridad.UsuarioActual;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -44,9 +46,11 @@ public class BusquedaCargasService {
     private final TransporteClient transporte;
     private final CalculadorDesvio calculadorDesvio;
     private final BusquedaProperties propiedades;
+    private final UsuarioActual usuarioActual;
 
     public BusquedaCargasService(CargaRepository cargas, TransporteClient transporte, CalculadorDesvio calculadorDesvio,
-                                 BusquedaProperties propiedades) {
+                                 BusquedaProperties propiedades, UsuarioActual usuarioActual) {
+        this.usuarioActual = usuarioActual;
         this.cargas = cargas;
         this.transporte = transporte;
         this.calculadorDesvio = calculadorDesvio;
@@ -55,6 +59,10 @@ public class BusquedaCargasService {
 
     public List<CargaDePasoResponse> buscar(Long retornoId) {
         RetornoInternoDTO retorno = transporte.obtenerRetorno(retornoId);
+        // RN-T1: el endpoint interno no controla al dueño, así que se controla acá.
+        if (!usuarioActual.id().equals(retorno.transportistaSub())) {
+            throw new AccesoDenegadoException("Este retorno no es tuyo");
+        }
         // El contrato interno devuelve el retorno en cualquier estado y deja que decida quien lo pide.
         if (!RETORNO_PUBLICADO.equals(retorno.estado())) {
             throw new ConflictoException("El retorno ya no está publicado (está " + retorno.estado() + ")");

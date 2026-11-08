@@ -20,7 +20,7 @@ public class BusquedaCargasController {
         this.service = service;
     }
 
-    /** 404 si el retorno no existe; 409 si ya no está publicado; 503 si transporte-service no responde. */
+    /** 403 si el retorno es de otro; 404 si no existe; 409 si ya no está publicado; 503 si transporte no responde. */
     @GetMapping
     public List<CargaDePasoResponse> buscar(@RequestParam Long retornoId) {
         return service.buscar(retornoId);
