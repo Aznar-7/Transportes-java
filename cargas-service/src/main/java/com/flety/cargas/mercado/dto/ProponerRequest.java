@@ -1,6 +1,7 @@
 package com.flety.cargas.mercado.dto;
 
 import com.flety.cargas.mercado.TipoPropuesta;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
@@ -22,6 +23,7 @@ public record ProponerRequest(
 ) {
 
     @AssertTrue(message = "una contraoferta lleva precio; aceptar el precio del dador, no")
+    @Schema(hidden = true)
     public boolean isPrecioCoherente() {
         return tipo == null || (tipo == TipoPropuesta.CONTRAOFERTA) == (precio != null);
     }

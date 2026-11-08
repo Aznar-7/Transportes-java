@@ -1,6 +1,7 @@
 package com.flety.cargas.mercado.dto;
 
 import com.flety.commons.contrato.TipoCarroceria;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Digits;
@@ -39,6 +40,7 @@ public record PublicarCargaRequest(
 
     /** Cada ventana abre antes de cerrar, y no se puede descargar antes de cargar. Si falta una fecha, avisa @NotNull. */
     @AssertTrue(message = "las ventanas no son coherentes: cada una abre antes de cerrar y la descarga va después de la carga")
+    @Schema(hidden = true)
     public boolean isVentanasCoherentes() {
         if (cargaDesde == null || cargaHasta == null || descargaDesde == null || descargaHasta == null) {
             return true;

@@ -1,5 +1,6 @@
 package com.flety.cargas.mercado.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -19,6 +20,7 @@ public record UbicacionRequest(
 
     /** Una sola coordenada no sirve para ubicar nada: vienen las dos o ninguna. */
     @AssertTrue(message = "lat y lng van juntas: mandá las dos o ninguna")
+    @Schema(hidden = true)
     public boolean isCoordenadasCompletas() {
         return (lat == null) == (lng == null);
     }
