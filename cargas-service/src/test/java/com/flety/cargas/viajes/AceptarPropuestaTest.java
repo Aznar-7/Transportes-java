@@ -4,6 +4,8 @@ import com.flety.cargas.TokensDePrueba;
 import com.flety.cargas.TransporteDePrueba;
 import com.flety.cargas.transporte.TransporteClientFake;
 import com.flety.cargas.mercado.Carga;
+import com.flety.cargas.mercado.Dador;
+import com.flety.cargas.mercado.DadorRepository;
 import com.flety.cargas.mercado.EstadoCarga;
 import com.flety.cargas.mercado.EstadoPropuesta;
 import com.flety.cargas.mercado.Propuesta;
@@ -48,6 +50,9 @@ class AceptarPropuestaTest {
 
     @Autowired
     TransporteClientFake transporte;
+
+    @Autowired
+    DadorRepository dadores;
 
     @Test
     void creaElViajeConfirmadoAsignaLaCargaYRechazaLasDemas() throws Exception {
@@ -150,6 +155,26 @@ class AceptarPropuestaTest {
     }
 
     @Test
+    void copiaEnElViajeElContactoDeLaOrganizacionDelDador() throws Exception {
+        // Este test no hace rollback y otros esperan que dador2 no tenga organización: por eso se borra al final.
+        Dador organizacion = dadores.save(
+                new Dador("sub-dador2", "33693450239", "Molinos del Centro SA", "+5493515559876", true));
+        try {
+            Carga carga = ViajesDePrueba.nuevaCarga(Instant.now().plus(1, ChronoUnit.DAYS));
+            carga.setDadorSub("sub-dador2");
+            carga.setEstado(EstadoCarga.CON_PROPUESTAS);
+            Propuesta propuesta = propuestaHabilitada(fixture.cargas().save(carga));
+
+            aceptar(propuesta.getId(), TokensDePrueba.OTRO_DADOR)
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.contactos.dador.nombre").value("Molinos del Centro SA"))
+                    .andExpect(jsonPath("$.contactos.dador.telefono").value("+5493515559876"));
+        } finally {
+            dadores.delete(organizacion);
+        }
+    }
+
+    @Test
     void copiaEnElViajeLosDatosDelTransportistaQueDaTransporte() throws Exception {
         Propuesta propuesta = propuestaHabilitada(fixture.cargaAbierta());
 
@@ -158,7 +183,7 @@ class AceptarPropuestaTest {
                 .andExpect(jsonPath("$.contactos.transportista.nombre").value("Transportes Pérez SRL"))
                 .andExpect(jsonPath("$.contactos.transportista.telefono").value("+54 351 555-1234"))
                 .andExpect(jsonPath("$.contactos.unidadDominio").value("AB123CD"))
-                // Hasta que exista la entidad Dador (FLY-19) no hay de dónde copiar su contacto.
+                // El fixture crea la carga directo, sin organización del dador: no hay de dónde copiar su contacto.
                 .andExpect(jsonPath("$.contactos.dador").value(nullValue()))
                 .andReturn();
 
