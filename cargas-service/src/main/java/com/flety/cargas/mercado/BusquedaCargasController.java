@@ -1,6 +1,6 @@
 package com.flety.cargas.mercado;
 
-import com.flety.cargas.mercado.dto.CargaReservadaResponse;
+import com.flety.cargas.mercado.dto.CargaDePasoResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +22,7 @@ public class BusquedaCargasController {
 
     /** 404 si el retorno no existe; 409 si ya no está publicado; 503 si transporte-service no responde. */
     @GetMapping
-    public List<CargaReservadaResponse> buscar(@RequestParam Long retornoId) {
+    public List<CargaDePasoResponse> buscar(@RequestParam Long retornoId) {
         return service.buscar(retornoId);
     }
 }

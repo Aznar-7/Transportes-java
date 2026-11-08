@@ -7,6 +7,7 @@ import com.flety.commons.contrato.RetornoInternoDTO;
 import com.flety.commons.contrato.TipoCarroceria;
 import com.flety.commons.contrato.UbicacionDTO;
 import com.flety.commons.geo.Coordenada;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TokensDePrueba.class, TransporteDePrueba.class})
+@Import({TokensDePrueba.class, TransporteDePrueba.class, DesvioDePrueba.class})
 @Transactional
 class CargasDePasoTest {
 
@@ -60,16 +61,24 @@ class CargasDePasoTest {
     @Autowired
     TransporteClientFake transporte;
 
+    @Autowired
+    DesvioDePrueba.Calculador desvios;
+
+    @BeforeEach
+    void limpiarDesvios() {
+        desvios.limpiar();
+    }
+
     @Test
     void apareceUnaCargaCompatibleSinDatosReservados() throws Exception {
         Long id = cargas.save(cargaCompatible()).getId();
 
         buscar(retorno("PUBLICADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", hasItem(id.intValue())))
-                .andExpect(jsonPath("$[0].origen.localidad").value("Rosario"))
-                .andExpect(jsonPath("$[0].origen.direccion").doesNotExist())
-                .andExpect(jsonPath("$[0].origen.lat").doesNotExist());
+                .andExpect(jsonPath("$[*].carga.id", hasItem(id.intValue())))
+                .andExpect(jsonPath("$[0].carga.origen.localidad").value("Rosario"))
+                .andExpect(jsonPath("$[0].carga.origen.direccion").doesNotExist())
+                .andExpect(jsonPath("$[0].carga.origen.lat").doesNotExist());
     }
 
     @Test
@@ -84,9 +93,9 @@ class CargasDePasoTest {
 
         buscar(retorno("PUBLICADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", hasItem(publicada.intValue())))
-                .andExpect(jsonPath("$[*].id", hasItem(conPropuestasId.intValue())))
-                .andExpect(jsonPath("$[*].id", not(hasItem(asignadaId.intValue()))));
+                .andExpect(jsonPath("$[*].carga.id", hasItem(publicada.intValue())))
+                .andExpect(jsonPath("$[*].carga.id", hasItem(conPropuestasId.intValue())))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(asignadaId.intValue()))));
     }
 
     @Test
@@ -103,9 +112,9 @@ class CargasDePasoTest {
 
         buscar(retorno("PUBLICADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", hasItem(seSuperpone.intValue())))
-                .andExpect(jsonPath("$[*].id", not(hasItem(antesId.intValue()))))
-                .andExpect(jsonPath("$[*].id", not(hasItem(despuesId.intValue()))));
+                .andExpect(jsonPath("$[*].carga.id", hasItem(seSuperpone.intValue())))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(antesId.intValue()))))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(despuesId.intValue()))));
     }
 
     @Test
@@ -117,8 +126,8 @@ class CargasDePasoTest {
 
         buscar(retorno("PUBLICADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", hasItem(acepta.intValue())))
-                .andExpect(jsonPath("$[*].id", not(hasItem(noAceptaId.intValue()))));
+                .andExpect(jsonPath("$[*].carga.id", hasItem(acepta.intValue())))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(noAceptaId.intValue()))));
     }
 
     @Test
@@ -136,9 +145,9 @@ class CargasDePasoTest {
 
         buscar(retorno("PUBLICADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", hasItem(justaId.intValue())))
-                .andExpect(jsonPath("$[*].id", not(hasItem(pesadaId.intValue()))))
-                .andExpect(jsonPath("$[*].id", not(hasItem(voluminosaId.intValue()))));
+                .andExpect(jsonPath("$[*].carga.id", hasItem(justaId.intValue())))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(pesadaId.intValue()))))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(voluminosaId.intValue()))));
     }
 
     @Test
@@ -153,9 +162,9 @@ class CargasDePasoTest {
 
         buscar(retorno("PUBLICADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", hasItem(cerca.intValue())))
-                .andExpect(jsonPath("$[*].id", not(hasItem(retiroLejosId.intValue()))))
-                .andExpect(jsonPath("$[*].id", not(hasItem(entregaLejosId.intValue()))));
+                .andExpect(jsonPath("$[*].carga.id", hasItem(cerca.intValue())))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(retiroLejosId.intValue()))))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(entregaLejosId.intValue()))));
     }
 
     /** Córdoba está en -31.42: la caja llega hasta 30 km más al norte (-31.15), o 60 km si la ruta es aproximada. */
@@ -167,11 +176,37 @@ class CargasDePasoTest {
 
         buscar(retorno("PUBLICADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", not(hasItem(id.intValue()))));
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(id.intValue()))));
 
         buscar(retorno("PUBLICADO", List.of(ROSARIO, CORDOBA), true))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[*].id", hasItem(id.intValue())));
+                .andExpect(jsonPath("$[*].carga.id", hasItem(id.intValue())));
+    }
+
+    @Test
+    void cadaResultadoTraeSuDesvioRedondeado() throws Exception {
+        cargas.save(cargaCompatible());
+        desvios.conDesvio(ROSARIO, 12.34);
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].desvioKm").value(12.3))
+                .andExpect(jsonPath("$[0].aproximado").value(false));
+    }
+
+    @Test
+    void unDesvioMayorAlMaximoDelRetornoQuedaAfuera() throws Exception {
+        Carga justa = cargaCompatible();
+        justa.setOrigen(new Ubicacion("Santa Fe", "Roldán", -32.90, -60.90, "Rivadavia 1"));
+        Long justaId = cargas.save(justa).getId();
+        Long pasadaId = cargas.save(cargaCompatible()).getId();
+        desvios.conDesvio(new Coordenada(-32.90, -60.90), 30.0);
+        desvios.conDesvio(ROSARIO, 30.1);
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].carga.id", hasItem(justaId.intValue())))
+                .andExpect(jsonPath("$[*].carga.id", not(hasItem(pasadaId.intValue()))));
     }
 
     @Test
