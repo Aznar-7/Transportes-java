@@ -76,6 +76,45 @@ class DadorControllerTest {
     }
 
     @Test
+    void conDigitoVerificadorInvalidoDevuelve400YNoGuarda() throws Exception {
+        mockMvc.perform(post(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"cuit": "30546671167", "razonSocial": "Acme SA",
+                                 "telefono": "+5493514445566", "declaraEmpresa": true}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.cuit").value("El CUIT no posee un dígito verificador válido"));
+
+        assertThat(repository.existsByOwnerSub("sub-dador1")).isFalse();
+    }
+
+    /** El validador común acepta guiones, pero acá se guarda un solo formato para que el índice único sirva. */
+    @Test
+    void conCuitConGuionesDevuelve400() throws Exception {
+        mockMvc.perform(post(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"cuit": "30-54667116-6", "razonSocial": "Acme SA",
+                                 "telefono": "+5493514445566", "declaraEmpresa": true}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.cuit").value("debe tener 11 dígitos sin guiones"));
+    }
+
+    @Test
+    void sinCuitNiDeclaracionDevuelve400ConLosCampos() throws Exception {
+        mockMvc.perform(post(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"razonSocial": "Acme SA", "telefono": "+5493514445566"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.cuit").exists())
+                .andExpect(jsonPath("$.errores.declaraEmpresa").exists());
+    }
+
+    @Test
     void conCuitExistenteDevuelve409() throws Exception {
         repository.save(new Dador("sub-otro", "30546671166", "Otra SA", "3514440000", true));
 
