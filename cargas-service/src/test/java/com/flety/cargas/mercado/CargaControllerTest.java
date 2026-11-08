@@ -1,6 +1,7 @@
 package com.flety.cargas.mercado;
 
 import com.flety.cargas.TokensDePrueba;
+import com.flety.cargas.viajes.ViajesDePrueba;
 import com.flety.commons.contrato.TipoCarroceria;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,10 +20,12 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -32,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(TokensDePrueba.class)
+@Import({TokensDePrueba.class, ViajesDePrueba.class})
 @Transactional
 class CargaControllerTest {
 
@@ -53,6 +56,9 @@ class CargaControllerTest {
 
     @Autowired
     CargaRepository cargas;
+
+    @Autowired
+    ViajesDePrueba.Fixture fixture;
 
     @BeforeEach
     void dadorRegistrado() {
@@ -292,6 +298,63 @@ class CargaControllerTest {
     void unaCargaQueNoExisteDevuelve404() throws Exception {
         mockMvc.perform(get(URL + "/999999").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void darDeBajaLaDejaCanceladaYRechazaLasPropuestasPendientes() throws Exception {
+        Carga carga = fixture.cargaAbierta();
+        Propuesta pendiente = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
+        Propuesta retirada = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
+        retirada.setEstado(EstadoPropuesta.RETIRADA);
+
+        borrar(carga.getId(), TokensDePrueba.DADOR).andExpect(status().isNoContent());
+
+        assertThat(cargas.findById(carga.getId()).orElseThrow().getEstado()).isEqualTo(EstadoCarga.CANCELADA);
+        assertThat(pendiente.getEstado()).isEqualTo(EstadoPropuesta.RECHAZADA);
+        assertThat(retirada.getEstado()).isEqualTo(EstadoPropuesta.RETIRADA);
+    }
+
+    @Test
+    void unaCargaConViajeNoSePuedeBorrar() throws Exception {
+        Long cargaId = fixture.viajeConfirmado().getCarga().getId();
+
+        borrar(cargaId, TokensDePrueba.DADOR)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("La carga tiene un viaje en curso: cancelá el viaje"));
+
+        assertThat(cargas.findById(cargaId).orElseThrow().getEstado()).isEqualTo(EstadoCarga.ASIGNADA);
+    }
+
+    @Test
+    void unaCargaYaTerminadaNoSePuedeBorrar() throws Exception {
+        for (EstadoCarga terminada : List.of(EstadoCarga.CERRADA, EstadoCarga.CANCELADA, EstadoCarga.VENCIDA)) {
+            Carga carga = cargaGuardada("sub-dador1", "Alimentos secos", terminada);
+
+            borrar(carga.getId(), TokensDePrueba.DADOR).andExpect(status().isConflict());
+        }
+    }
+
+    @Test
+    void otroDadorNoPuedeBorrarla() throws Exception {
+        Carga carga = fixture.cargaAbierta();
+
+        borrar(carga.getId(), TokensDePrueba.OTRO_DADOR).andExpect(status().isForbidden());
+
+        assertThat(cargas.findById(carga.getId()).orElseThrow().getEstado()).isEqualTo(EstadoCarga.CON_PROPUESTAS);
+    }
+
+    @Test
+    void unTransportistaNoPuedeBorrarla() throws Exception {
+        borrar(fixture.cargaAbierta().getId(), TokensDePrueba.TRANSPORTISTA).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void borrarUnaCargaQueNoExisteDevuelve404() throws Exception {
+        borrar(999_999L, TokensDePrueba.DADOR).andExpect(status().isNotFound());
+    }
+
+    private ResultActions borrar(Long id, String token) throws Exception {
+        return mockMvc.perform(delete(URL + "/" + id).header(HttpHeaders.AUTHORIZATION, token));
     }
 
     private Carga cargaGuardada(String dadorSub, String rubro, EstadoCarga estado) {

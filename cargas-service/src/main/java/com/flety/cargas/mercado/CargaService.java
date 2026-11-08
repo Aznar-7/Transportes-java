@@ -6,6 +6,7 @@ import com.flety.cargas.mercado.dto.CargaVista;
 import com.flety.cargas.mercado.dto.PublicarCargaRequest;
 import com.flety.cargas.mercado.dto.UbicacionRequest;
 import com.flety.commons.excepciones.AccesoDenegadoException;
+import com.flety.commons.excepciones.ConflictoException;
 import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.excepciones.ReglaNegocioException;
 import com.flety.commons.excepciones.ServicioExternoException;
@@ -22,19 +23,25 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class CargaService {
 
+    /** Mientras nadie la tomó. ASIGNADA tiene un viaje; CERRADA, CANCELADA y VENCIDA ya terminaron. */
+    private static final Set<EstadoCarga> CANCELABLE = EnumSet.of(EstadoCarga.PUBLICADA, EstadoCarga.CON_PROPUESTAS);
+
     private final CargaRepository cargas;
     private final DadorRepository dadores;
+    private final PropuestaRepository propuestas;
     private final GeorefClient georef;
     private final UsuarioActual usuarioActual;
 
-    public CargaService(CargaRepository cargas, DadorRepository dadores, GeorefClient georef,
-                        UsuarioActual usuarioActual) {
+    public CargaService(CargaRepository cargas, DadorRepository dadores, PropuestaRepository propuestas,
+                        GeorefClient georef, UsuarioActual usuarioActual) {
         this.cargas = cargas;
         this.dadores = dadores;
+        this.propuestas = propuestas;
         this.georef = georef;
         this.usuarioActual = usuarioActual;
     }
@@ -101,6 +108,31 @@ public class CargaService {
             return CargaReservadaResponse.desde(carga);
         }
         throw new AccesoDenegadoException("No sos el dador de esta carga");
+    }
+
+    /**
+     * Baja lógica: la carga pasa a CANCELADA y no se borra, porque puede tener propuestas que quedan como historia.
+     * Las propuestas que seguían esperando se rechazan, para que ningún transportista quede esperando una respuesta.
+     * <p>
+     * Si a la vez alguien acepta una propuesta, se ordenan por la propia carga: si la aceptación terminó antes, acá
+     * se ve ASIGNADA o el @Version de Carga hace fallar el UPDATE; si la baja terminó antes, la aceptación ve
+     * CANCELADA. En los dos casos el que llega segundo recibe 409.
+     */
+    @Transactional
+    public void cancelar(Long id) {
+        Carga carga = buscar(id);
+        if (!carga.getDadorSub().equals(usuarioActual.id())) {
+            throw new AccesoDenegadoException("No sos el dador de esta carga");
+        }
+        if (carga.getEstado() == EstadoCarga.ASIGNADA) {
+            throw new ConflictoException("La carga tiene un viaje en curso: cancelá el viaje");
+        }
+        if (!CANCELABLE.contains(carga.getEstado())) {
+            throw new ConflictoException("La carga ya no se puede cancelar (está " + carga.getEstado() + ")");
+        }
+        propuestas.findByCargaIdAndEstado(id, EstadoPropuesta.PENDIENTE)
+                .forEach(propuesta -> propuesta.setEstado(EstadoPropuesta.RECHAZADA));
+        carga.setEstado(EstadoCarga.CANCELADA);
     }
 
     private Carga buscar(Long id) {
