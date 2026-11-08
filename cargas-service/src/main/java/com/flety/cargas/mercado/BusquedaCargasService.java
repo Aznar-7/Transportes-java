@@ -31,6 +31,15 @@ public class BusquedaCargasService {
     private static final String RETORNO_PUBLICADO = "PUBLICADO";
     private static final double FACTOR_CORREDOR_APROXIMADO = 2;
 
+    /**
+     * RN-02: menos desvío primero y, si empatan, la que mejor paga por km. Sin ranking opaco: todo lo que decide el
+     * orden está en la respuesta. El id solo desempata para que la misma búsqueda salga siempre igual.
+     */
+    private static final Comparator<CargaDePasoResponse> ORDEN_RN_02 = Comparator
+            .comparingDouble(CargaDePasoResponse::desvioKm)
+            .thenComparing(CargaDePasoResponse::precioPorKm, Comparator.reverseOrder())
+            .thenComparing(resultado -> resultado.carga().id());
+
     private final CargaRepository cargas;
     private final TransporteClient transporte;
     private final CalculadorDesvio calculadorDesvio;
@@ -61,6 +70,7 @@ public class BusquedaCargasService {
                 .map(carga -> conDesvio(carga, origen, destino))
                 // RN-01: el desvío no puede pasar el máximo que aceptó el transportista al publicar el retorno.
                 .filter(resultado -> resultado.desvioKm() <= retorno.desvioMaximoKm())
+                .sorted(ORDEN_RN_02)
                 .toList();
     }
 

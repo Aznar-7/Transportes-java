@@ -7,6 +7,7 @@ import com.flety.commons.contrato.RetornoInternoDTO;
 import com.flety.commons.contrato.TipoCarroceria;
 import com.flety.commons.contrato.UbicacionDTO;
 import com.flety.commons.geo.Coordenada;
+import com.flety.commons.geo.GeoUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -192,6 +194,27 @@ class CargasDePasoTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].desvioKm").value(12.3))
                 .andExpect(jsonPath("$[0].aproximado").value(false));
+    }
+
+    @Test
+    void elPrecioPorKmEsElPrecioOfrecidoSobreLaDistanciaEntreRetiroYEntrega() throws Exception {
+        cargas.save(cargaCompatible());
+        double km = GeoUtils.distanciaEnKm(ROSARIO, VILLA_MARIA);
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].precioPorKm").value(closeTo(850000 / km, 0.01)));
+    }
+
+    /** Lo que le toca hacer al CalculadorDesvio real cuando se cae la API: acá se simula su respuesta. */
+    @Test
+    void siLaApiDeRutasFallaLosResultadosSalenMarcadosComoAproximados() throws Exception {
+        cargas.save(cargaCompatible());
+        desvios.simularCaidaDeLaApi();
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].aproximado").value(true));
     }
 
     @Test
