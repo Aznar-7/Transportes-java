@@ -27,7 +27,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -233,6 +235,57 @@ class CargasDePasoTest {
     }
 
     @Test
+    void seOrdenanPorDesvioDeMenorAMayor() throws Exception {
+        Long lejos = cargaEn(new Coordenada(-32.90, -60.90), "850000.00", 25.0);
+        Long cerca = cargaEn(new Coordenada(-32.85, -61.00), "850000.00", 2.5);
+        Long medio = cargaEn(new Coordenada(-32.80, -61.10), "850000.00", 11.0);
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].carga.id", contains(cerca.intValue(), medio.intValue(), lejos.intValue())));
+    }
+
+    @Test
+    void conElMismoDesvioPrimeroLaQueMejorPagaPorKm() throws Exception {
+        Long barata = cargaEn(new Coordenada(-32.90, -60.90), "400000.00", 10.0);
+        Long cara = cargaEn(new Coordenada(-32.85, -61.00), "900000.00", 10.0);
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].carga.id", contains(cara.intValue(), barata.intValue())));
+    }
+
+    @Test
+    void elDesvioMandaSobreElPrecio() throws Exception {
+        Long caraPeroLejos = cargaEn(new Coordenada(-32.90, -60.90), "900000.00", 20.0);
+        Long barataPeroCerca = cargaEn(new Coordenada(-32.85, -61.00), "400000.00", 5.0);
+
+        buscar(retorno("PUBLICADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].carga.id", contains(barataPeroCerca.intValue(), caraPeroLejos.intValue())));
+    }
+
+    @Test
+    void conTransporteCaidoDevuelve503SinResultadosNiLlamadasALaApi() throws Exception {
+        cargas.save(cargaCompatible());
+        Long retorno = retorno("PUBLICADO");
+        transporte.simularCaida(true);
+        try {
+            buscar(retorno)
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$[0]").doesNotExist());
+        } finally {
+            transporte.simularCaida(false);
+        }
+        assertThat(desvios.llamadas()).isZero();
+    }
+
+    @Test
+    void unRetornoQueNoExisteDevuelve404() throws Exception {
+        buscar(999_999L).andExpect(status().isNotFound());
+    }
+
+    @Test
     void unRetornoQueYaNoEstaPublicadoDevuelve409() throws Exception {
         buscar(retorno("VENCIDO"))
                 .andExpect(status().isConflict())
@@ -255,6 +308,14 @@ class CargasDePasoTest {
     void sinRetornoIdDevuelve400() throws Exception {
         mockMvc.perform(get("/api/cargas/de-paso").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
                 .andExpect(status().isBadRequest());
+    }
+
+    private Long cargaEn(Coordenada retiro, String precio, double desvioKm) {
+        Carga carga = cargaCompatible();
+        carga.setOrigen(new Ubicacion("Santa Fe", "Retiro", retiro.lat(), retiro.lng(), "Calle 1"));
+        carga.setPrecioOfrecido(new BigDecimal(precio));
+        desvios.conDesvio(retiro, desvioKm);
+        return cargas.save(carga).getId();
     }
 
     private ResultActions buscar(Long retornoId) throws Exception {
