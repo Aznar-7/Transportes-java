@@ -46,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class PropuestaControllerTest {
 
-    private static final Instant CARGA_DESDE = Instant.now().plus(10, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
+    static final Instant CARGA_DESDE = Instant.now().plus(10, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
     private static final AtomicLong RETORNOS = new AtomicLong(2000);
     private static final String DUENO = "sub-transportista1";
 
@@ -343,6 +343,130 @@ class PropuestaControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    void unaSegundaPropuestaMiaParaLaMismaCargaDevuelve409() throws Exception {
+        Carga carga = cargas.save(cargaAbierta());
+        Long unidad = unidadHabilitada();
+        Long retorno = retorno(unidad);
+        proponer(carga.getId(), aceptaPrecio(unidad, retorno)).andExpect(status().isCreated());
+
+        proponer(carga.getId(), contraoferta(unidad, retorno, "800000"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Ya hiciste una propuesta para esta carga"));
+    }
+
+    @Test
+    void retirarLaPropuestaNoHabilitaOtraParaLaMismaCarga() throws Exception {
+        Carga carga = cargas.save(cargaAbierta());
+        Long unidad = unidadHabilitada();
+        Propuesta retirada = fixture.propuestaPendiente(carga, unidad);
+        retirada.setEstado(EstadoPropuesta.RETIRADA);
+
+        proponer(carga.getId(), aceptaPrecio(unidad, retorno(unidad))).andExpect(status().isConflict());
+    }
+
+    @Test
+    void otroTransportistaSiPuedeProponerParaLaMismaCarga() throws Exception {
+        Carga carga = cargas.save(cargaAbierta());
+        fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva(), "sub-transportista2");
+        Long unidad = unidadHabilitada();
+
+        proponer(carga.getId(), aceptaPrecio(unidad, retorno(unidad))).andExpect(status().isCreated());
+    }
+
+    @Test
+    void conUnaUnidadNoHabilitadaDevuelve422ConElMotivo() throws Exception {
+        Carga carga = cargas.save(cargaAbierta());
+        Long unidad = ViajesDePrueba.unidadNueva();
+        transporte.conHabilitacion(habilitacion(unidad, DUENO, false, TipoCarroceria.SIDER));
+
+        proponer(carga.getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.detail").value("La unidad no está habilitada: Falta la póliza de carga"));
+
+        assertThat(carga.getEstado()).isEqualTo(EstadoCarga.PUBLICADA);
+    }
+
+    @Test
+    void conUnaCarroceriaQueLaCargaNoAceptaDevuelve422() throws Exception {
+        Long unidad = ViajesDePrueba.unidadNueva();
+        transporte.conHabilitacion(habilitacion(unidad, DUENO, true, TipoCarroceria.TANQUE));
+
+        proponer(cargas.save(cargaAbierta()).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.detail").value("La carga no acepta la carrocería TANQUE"));
+    }
+
+    @Test
+    void conUnaCargaMasPesadaQueLaUnidadDevuelve422() throws Exception {
+        Carga carga = cargaAbierta();
+        carga.setPesoToneladas(new BigDecimal("28.01"));
+        Long unidad = unidadHabilitada();
+
+        proponer(cargas.save(carga).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isUnprocessableContent());
+    }
+
+    @Test
+    void conUnaCargaQueNoEntraEnLaUnidadDevuelve422() throws Exception {
+        Carga carga = cargaAbierta();
+        carga.setVolumenM3(new BigDecimal("90.01"));
+        Long unidad = unidadHabilitada();
+
+        proponer(cargas.save(carga).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isUnprocessableContent());
+    }
+
+    @Test
+    void conUnaVentanaQueNoCoincideConElRetornoDevuelve422() throws Exception {
+        Long unidad = unidadHabilitada();
+        Long retorno = retorno(unidad, DUENO, "PUBLICADO", unidad, CARGA_DESDE.plus(5, ChronoUnit.DAYS));
+
+        proponer(cargas.save(cargaAbierta()).getId(), aceptaPrecio(unidad, retorno))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.detail").value("La ventana de carga no coincide con la salida del retorno"));
+    }
+
+    @Test
+    void conUnRetornoDeOtraUnidadDevuelve422() throws Exception {
+        Long unidad = unidadHabilitada();
+        Long retorno = retorno(unidad, DUENO, "PUBLICADO", ViajesDePrueba.unidadNueva(), CARGA_DESDE);
+
+        proponer(cargas.save(cargaAbierta()).getId(), aceptaPrecio(unidad, retorno))
+                .andExpect(status().isUnprocessableContent());
+    }
+
+    @Test
+    void conUnRetornoQueYaNoEstaPublicadoDevuelve409() throws Exception {
+        Long unidad = unidadHabilitada();
+
+        proponer(cargas.save(cargaAbierta()).getId(), aceptaPrecio(unidad, retorno(unidad, DUENO, "VENCIDO", unidad, CARGA_DESDE)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void unaCargaQueYaNoEstaAbiertaDevuelve409() throws Exception {
+        Carga carga = cargaAbierta();
+        carga.setEstado(EstadoCarga.ASIGNADA);
+        Long unidad = unidadHabilitada();
+
+        proponer(cargas.save(carga).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("La carga ya no admite propuestas (está ASIGNADA)"));
+    }
+
+    @Test
+    void unaCargaConLaVentanaYaCerradaDevuelve409() throws Exception {
+        Carga carga = cargaAbierta();
+        carga.setCargaDesde(Instant.now().minus(2, ChronoUnit.HOURS));
+        carga.setCargaHasta(Instant.now().minus(1, ChronoUnit.HOURS));
+        Long unidad = unidadHabilitada();
+
+        proponer(cargas.save(carga).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("La ventana de carga ya cerró"));
+    }
+
     ResultActions proponer(Long cargaId, String cuerpo) throws Exception {
         return mockMvc.perform(post("/api/cargas/" + cargaId + "/propuestas")
                 .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA)
@@ -377,13 +501,13 @@ class PropuestaControllerTest {
         return id;
     }
 
-    private static HabilitacionUnidadDTO habilitacion(Long unidad, String sub, boolean habilitada, TipoCarroceria carroceria) {
+    static HabilitacionUnidadDTO habilitacion(Long unidad, String sub, boolean habilitada, TipoCarroceria carroceria) {
         return new HabilitacionUnidadDTO(unidad, habilitada, habilitada ? List.of() : List.of("Falta la póliza de carga"),
                 "AB123CD", carroceria, new BigDecimal("28.00"), new BigDecimal("90.00"), new BigDecimal("50000000.00"),
                 3L, "Transportes Pérez SRL", "+54 351 555-1234", sub);
     }
 
-    private static Carga cargaAbierta() {
+    static Carga cargaAbierta() {
         Carga carga = new Carga();
         carga.setDadorSub("sub-dador1");
         carga.setOrigen(new Ubicacion("Santa Fe", "Rosario", -32.9468, -60.6393, "Bv. Oroño 500"));
