@@ -3,6 +3,7 @@ package com.flety.cargas.mercado;
 import com.flety.cargas.mercado.dto.PropuestaResponse;
 import com.flety.cargas.mercado.dto.ProponerRequest;
 import com.flety.cargas.transporte.TransporteClient;
+import com.flety.cargas.viajes.ViajesActivosPorUnidad;
 import com.flety.commons.contrato.HabilitacionUnidadDTO;
 import com.flety.commons.contrato.RetornoInternoDTO;
 import com.flety.commons.excepciones.AccesoDenegadoException;
@@ -26,10 +27,12 @@ public class PropuestaService {
     private final CargaRepository cargas;
     private final AltaDePropuesta alta;
     private final TransporteClient transporte;
+    private final ViajesActivosPorUnidad viajesActivos;
     private final UsuarioActual usuarioActual;
 
     public PropuestaService(CargaRepository cargas, AltaDePropuesta alta, TransporteClient transporte,
-                            UsuarioActual usuarioActual) {
+                            ViajesActivosPorUnidad viajesActivos, UsuarioActual usuarioActual) {
+        this.viajesActivos = viajesActivos;
         this.cargas = cargas;
         this.alta = alta;
         this.transporte = transporte;
@@ -66,6 +69,11 @@ public class PropuestaService {
         }
         validarHabilitacion(unidad);
         validarCompatibilidad(carga, unidad, retorno);
+        // RN-15: viajes conoce los viajes de la unidad; mercado le pregunta por la interfaz y no ve la entidad Viaje.
+        // Se vuelve a controlar al aceptar, porque hasta entonces se puede confirmar otro viaje con la misma unidad.
+        if (viajesActivos.haySuperposicion(pedido.unidadId(), carga.getCargaDesde(), carga.getDescargaHasta())) {
+            throw new ConflictoException("La unidad ya tiene un viaje que se superpone con esta carga (RN-15)");
+        }
 
         return PropuestaResponse.desde(alta.crear(cargaId, nueva(carga, pedido, transportistaSub, unidad)));
     }
@@ -104,9 +112,16 @@ public class PropuestaService {
         propuesta.setTipo(pedido.tipo());
         propuesta.setPrecio(precio(carga, pedido));
         propuesta.setMensaje(pedido.mensaje());
+        propuesta.setRequiereAceptacionRiesgo(requiereAceptarRiesgo(carga, unidad));
         Instant enUnDia = Instant.now().plus(VIGENCIA);
         propuesta.setVencimiento(enUnDia.isBefore(carga.getCargaHasta()) ? enUnDia : carga.getCargaHasta());
         return propuesta;
+    }
+
+    /** RN-06: no frena la propuesta, avisa. Decide el dador al aceptar. Sin póliza no hay nada que cubra la carga. */
+    private static boolean requiereAceptarRiesgo(Carga carga, HabilitacionUnidadDTO unidad) {
+        return unidad.sumaAseguradaCarga() == null
+                || carga.getValorDeclarado().compareTo(unidad.sumaAseguradaCarga()) > 0;
     }
 
     /** RN-03: el precio lo fija el dador. Una contraoferta igual a su precio no es una contraoferta. */

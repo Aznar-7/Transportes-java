@@ -59,6 +59,9 @@ class PropuestaControllerTest {
     @Autowired
     TransporteClientFake transporte;
 
+    @Autowired
+    ViajesDePrueba.Fixture fixture;
+
     @Test
     void aceptarElPrecioDevuelve201ConElPrecioDelDadorYLaCargaConPropuestas() throws Exception {
         Carga carga = cargas.save(cargaAbierta());
@@ -156,6 +159,50 @@ class PropuestaControllerTest {
         proponer(cargas.save(cargaAbierta()).getId(), aceptaPrecio(unidad, retorno(unidad, "sub-otro", "PUBLICADO", unidad, CARGA_DESDE)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.detail").value("Este retorno no es tuyo"));
+    }
+
+    @Test
+    void rn06ConValorDeclaradoMayorALaSumaAseguradaPideAceptarElRiesgo() throws Exception {
+        Carga carga = cargaAbierta();
+        carga.setValorDeclarado(new BigDecimal("50000000.01"));
+        Long unidad = unidadHabilitada();
+
+        proponer(cargas.save(carga).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.requiereAceptacionRiesgo").value(true));
+    }
+
+    @Test
+    void rn06ConValorDeclaradoIgualALaSumaAseguradaNoPideNada() throws Exception {
+        Carga carga = cargaAbierta();
+        carga.setValorDeclarado(new BigDecimal("50000000.00"));
+        Long unidad = unidadHabilitada();
+
+        proponer(cargas.save(carga).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.requiereAceptacionRiesgo").value(false));
+    }
+
+    @Test
+    void rn15ConUnViajeDeLaUnidadQueSePisaDevuelve409() throws Exception {
+        Long unidad = unidadHabilitada();
+        fixture.viajeConfirmado(unidad, CARGA_DESDE.plus(1, ChronoUnit.HOURS));
+        Carga carga = cargas.save(cargaAbierta());
+
+        proponer(carga.getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("La unidad ya tiene un viaje que se superpone con esta carga (RN-15)"));
+
+        assertThat(propuestas.existsByCargaIdAndTransportistaSub(carga.getId(), DUENO)).isFalse();
+    }
+
+    @Test
+    void rn15ConUnViajeDeLaUnidadEnOtrasFechasPasa() throws Exception {
+        Long unidad = unidadHabilitada();
+        fixture.viajeConfirmado(unidad, CARGA_DESDE.plus(30, ChronoUnit.DAYS));
+
+        proponer(cargas.save(cargaAbierta()).getId(), aceptaPrecio(unidad, retorno(unidad)))
+                .andExpect(status().isCreated());
     }
 
     @Test
