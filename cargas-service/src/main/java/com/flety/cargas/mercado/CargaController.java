@@ -5,12 +5,15 @@ import com.flety.cargas.mercado.dto.PublicarCargaRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/cargas")
@@ -28,5 +31,13 @@ public class CargaController {
     public ResponseEntity<CargaResponse> publicar(@Valid @RequestBody PublicarCargaRequest pedido) {
         CargaResponse carga = service.publicar(pedido);
         return ResponseEntity.created(URI.create("/api/cargas/" + carga.id())).body(carga);
+    }
+
+    /** Solo las propias: el dueño sale del token. Un estado que no existe da 400. */
+    @GetMapping
+    @PreAuthorize("hasRole('DADOR')")
+    public List<CargaResponse> listar(@RequestParam(required = false) EstadoCarga estado,
+                                      @RequestParam(required = false) String rubro) {
+        return service.listarPropias(estado, rubro);
     }
 }

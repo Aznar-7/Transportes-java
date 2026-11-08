@@ -1,6 +1,7 @@
 package com.flety.cargas.mercado;
 
 import com.flety.cargas.TokensDePrueba;
+import com.flety.commons.contrato.TipoCarroceria;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +15,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.EnumSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -167,6 +173,91 @@ class CargaControllerTest {
     void unTransportistaNoPuedePublicar() throws Exception {
         publicar(TokensDePrueba.TRANSPORTISTA, cuerpo(ORIGEN_CORDOBA, DESTINO_ROSARIO, DECLARA_TODO))
                 .andExpect(status().isForbidden());
+    }
+
+    // La base H2 se comparte con otros tests que no hacen rollback: por eso se mira por id y no se cuenta el total.
+
+    @Test
+    void listarDevuelveSoloLasMias() throws Exception {
+        Long mia = cargaGuardada("sub-dador1", "Alimentos secos", EstadoCarga.PUBLICADA).getId();
+        Long ajena = cargaGuardada("sub-dador2", "Alimentos secos", EstadoCarga.PUBLICADA).getId();
+
+        mockMvc.perform(get(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(mia.intValue())))
+                .andExpect(jsonPath("$[*].id", not(hasItem(ajena.intValue()))));
+    }
+
+    @Test
+    void listarFiltraPorEstado() throws Exception {
+        Long publicada = cargaGuardada("sub-dador1", "Alimentos secos", EstadoCarga.PUBLICADA).getId();
+        Long cancelada = cargaGuardada("sub-dador1", "Alimentos secos", EstadoCarga.CANCELADA).getId();
+
+        mockMvc.perform(get(URL).param("estado", "CANCELADA")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(cancelada.intValue())))
+                .andExpect(jsonPath("$[*].id", not(hasItem(publicada.intValue()))));
+    }
+
+    @Test
+    void listarFiltraPorRubroSinImportarLasMayusculas() throws Exception {
+        Long madera = cargaGuardada("sub-dador1", "Madera", EstadoCarga.PUBLICADA).getId();
+        Long acero = cargaGuardada("sub-dador1", "Acero", EstadoCarga.PUBLICADA).getId();
+
+        mockMvc.perform(get(URL).param("rubro", "maDERA")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(madera.intValue())))
+                .andExpect(jsonPath("$[*].id", not(hasItem(acero.intValue()))));
+    }
+
+    @Test
+    void listarConLosDosFiltrosExigeAmbos() throws Exception {
+        Long justa = cargaGuardada("sub-dador1", "Vidrio", EstadoCarga.PUBLICADA).getId();
+        Long otroEstado = cargaGuardada("sub-dador1", "Vidrio", EstadoCarga.VENCIDA).getId();
+        Long otroRubro = cargaGuardada("sub-dador1", "Papel", EstadoCarga.PUBLICADA).getId();
+
+        mockMvc.perform(get(URL).param("rubro", "Vidrio").param("estado", "PUBLICADA")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem(justa.intValue())))
+                .andExpect(jsonPath("$[*].id", not(hasItem(otroEstado.intValue()))))
+                .andExpect(jsonPath("$[*].id", not(hasItem(otroRubro.intValue()))));
+    }
+
+    @Test
+    void listarConUnEstadoQueNoExisteDevuelve400() throws Exception {
+        mockMvc.perform(get(URL).param("estado", "INVENTADO")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void unTransportistaNoPuedeListar() throws Exception {
+        mockMvc.perform(get(URL).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
+                .andExpect(status().isForbidden());
+    }
+
+    private Carga cargaGuardada(String dadorSub, String rubro, EstadoCarga estado) {
+        Carga carga = new Carga();
+        carga.setDadorSub(dadorSub);
+        carga.setOrigen(new Ubicacion("Córdoba", "Córdoba", -31.4201, -64.1888, "Av. Colón 1000"));
+        carga.setDestino(new Ubicacion("Santa Fe", "Rosario", -32.9468, -60.6393, "Bv. Oroño 500"));
+        carga.setCargaDesde(CARGA_DESDE);
+        carga.setCargaHasta(CARGA_DESDE.plus(8, ChronoUnit.HOURS));
+        carga.setDescargaDesde(CARGA_DESDE.plus(1, ChronoUnit.DAYS));
+        carga.setDescargaHasta(CARGA_DESDE.plus(2, ChronoUnit.DAYS));
+        carga.setRubro(rubro);
+        carga.setPesoToneladas(new BigDecimal("12.50"));
+        carga.setVolumenM3(new BigDecimal("40.00"));
+        carga.setCarroceriasAceptadas(EnumSet.of(TipoCarroceria.SIDER));
+        carga.setPrecioOfrecido(new BigDecimal("850000.00"));
+        carga.setValorDeclarado(new BigDecimal("12000000.00"));
+        carga.setDeclaraNoPeligrosa(true);
+        carga.setDeclaraNoSobredimensionada(true);
+        carga.setEstado(estado);
+        return cargas.save(carga);
     }
 
     private ResultActions publicar(String token, String cuerpo) throws Exception {

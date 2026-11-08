@@ -8,9 +8,16 @@ import com.flety.commons.excepciones.ServicioExternoException;
 import com.flety.commons.geo.Coordenada;
 import com.flety.commons.geo.GeorefClient;
 import com.flety.commons.seguridad.UsuarioActual;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Locale;
 
 @Service
 public class CargaService {
@@ -54,6 +61,26 @@ public class CargaService {
         carga.setDeclaraNoPeligrosa(true);
         carga.setDeclaraNoSobredimensionada(true);
         return CargaResponse.desde(cargas.save(carga));
+    }
+
+    /** Las cargas del dador, de la más nueva a la más vieja. Los filtros son opcionales; el rubro ignora mayúsculas. */
+    @Transactional(readOnly = true)
+    public List<CargaResponse> listarPropias(EstadoCarga estado, String rubro) {
+        String dadorSub = usuarioActual.id();
+        Specification<Carga> filtros = (carga, consulta, cb) -> {
+            List<Predicate> condiciones = new ArrayList<>();
+            condiciones.add(cb.equal(carga.get("dadorSub"), dadorSub));
+            if (estado != null) {
+                condiciones.add(cb.equal(carga.get("estado"), estado));
+            }
+            if (rubro != null && !rubro.isBlank()) {
+                condiciones.add(cb.equal(cb.lower(carga.get("rubro")), rubro.trim().toLowerCase(Locale.ROOT)));
+            }
+            return cb.and(condiciones.toArray(Predicate[]::new));
+        };
+        return cargas.findAll(filtros, Sort.by(Sort.Direction.DESC, "creadaEn", "id")).stream()
+                .map(CargaResponse::desde)
+                .toList();
     }
 
     /** RN-07 y RN-08: son 422 porque el pedido está bien formado, pero el negocio no permite publicar esta carga. */
