@@ -239,6 +239,61 @@ class CargaControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void elDadorVeSuCargaCompleta() throws Exception {
+        Carga carga = cargaGuardada("sub-dador1", "Alimentos secos", EstadoCarga.PUBLICADA);
+
+        mockMvc.perform(get(URL + "/" + carga.getId()).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.origen.direccion").value("Av. Colón 1000"))
+                .andExpect(jsonPath("$.destino.direccion").value("Bv. Oroño 500"))
+                .andExpect(jsonPath("$.origen.lat").value(-31.4201))
+                .andExpect(jsonPath("$.declaraNoPeligrosa").value(true));
+    }
+
+    @Test
+    void elTransportistaNoVeDireccionTelefonoNiCoordenadas() throws Exception {
+        Carga carga = cargaGuardada("sub-dador1", "Alimentos secos", EstadoCarga.PUBLICADA);
+
+        String respuesta = mockMvc.perform(get(URL + "/" + carga.getId())
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.origen.localidad").value("Córdoba"))
+                .andExpect(jsonPath("$.destino.localidad").value("Rosario"))
+                .andExpect(jsonPath("$.precioOfrecido").value(850000.00))
+                .andExpect(jsonPath("$.origen.direccion").doesNotExist())
+                .andExpect(jsonPath("$.destino.direccion").doesNotExist())
+                .andExpect(jsonPath("$.origen.lat").doesNotExist())
+                .andExpect(jsonPath("$.origen.lng").doesNotExist())
+                .andExpect(jsonPath("$.dadorSub").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+
+        // Por si un campo nuevo la filtra con otro nombre: ni el dato del dador ni la dirección aparecen en ningún lado.
+        assertThat(respuesta).doesNotContain("Colón", "Oroño", "sub-dador1", "+549", "Acme");
+    }
+
+    @Test
+    void otroDadorRecibe403() throws Exception {
+        Carga carga = cargaGuardada("sub-dador1", "Alimentos secos", EstadoCarga.PUBLICADA);
+
+        mockMvc.perform(get(URL + "/" + carga.getId()).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.OTRO_DADOR))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void elOperadorNoPuedeVerLaCarga() throws Exception {
+        Carga carga = cargaGuardada("sub-dador1", "Alimentos secos", EstadoCarga.PUBLICADA);
+
+        mockMvc.perform(get(URL + "/" + carga.getId()).header(HttpHeaders.AUTHORIZATION, TokensDePrueba.OPERADOR))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unaCargaQueNoExisteDevuelve404() throws Exception {
+        mockMvc.perform(get(URL + "/999999").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
+                .andExpect(status().isNotFound());
+    }
+
     private Carga cargaGuardada(String dadorSub, String rubro, EstadoCarga estado) {
         Carga carga = new Carga();
         carga.setDadorSub(dadorSub);

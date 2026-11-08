@@ -1,8 +1,12 @@
 package com.flety.cargas.mercado;
 
+import com.flety.cargas.mercado.dto.CargaReservadaResponse;
 import com.flety.cargas.mercado.dto.CargaResponse;
+import com.flety.cargas.mercado.dto.CargaVista;
 import com.flety.cargas.mercado.dto.PublicarCargaRequest;
 import com.flety.cargas.mercado.dto.UbicacionRequest;
+import com.flety.commons.excepciones.AccesoDenegadoException;
+import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.excepciones.ReglaNegocioException;
 import com.flety.commons.excepciones.ServicioExternoException;
 import com.flety.commons.geo.Coordenada;
@@ -81,6 +85,26 @@ public class CargaService {
         return cargas.findAll(filtros, Sort.by(Sort.Direction.DESC, "creadaEn", "id")).stream()
                 .map(CargaResponse::desde)
                 .toList();
+    }
+
+    /**
+     * RN-13: el dador de la carga la ve completa y el transportista, reservada. Otro dador no tiene nada que hacer
+     * con esta carga: 403 (RN-T1). El OPERADOR ni llega acá, lo corta el @PreAuthorize del controller.
+     */
+    @Transactional(readOnly = true)
+    public CargaVista ver(Long id) {
+        Carga carga = buscar(id);
+        if (carga.getDadorSub().equals(usuarioActual.id())) {
+            return CargaResponse.desde(carga);
+        }
+        if (usuarioActual.tieneRol("TRANSPORTISTA")) {
+            return CargaReservadaResponse.desde(carga);
+        }
+        throw new AccesoDenegadoException("No sos el dador de esta carga");
+    }
+
+    private Carga buscar(Long id) {
+        return cargas.findById(id).orElseThrow(() -> new RecursoNoEncontradoException("Carga", id));
     }
 
     /** RN-07 y RN-08: son 422 porque el pedido está bien formado, pero el negocio no permite publicar esta carga. */

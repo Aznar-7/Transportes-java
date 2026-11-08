@@ -30,7 +30,7 @@ public record CargaResponse(
         boolean declaraNoSobredimensionada,
         EstadoCarga estado,
         Instant creadaEn
-) {
+) implements CargaVista {
 
     public record UbicacionResponse(String provincia, String localidad, double lat, double lng, String direccion) {
 
