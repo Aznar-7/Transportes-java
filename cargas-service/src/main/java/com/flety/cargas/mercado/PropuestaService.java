@@ -12,10 +12,12 @@ import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.excepciones.ReglaNegocioException;
 import com.flety.commons.seguridad.UsuarioActual;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class PropuestaService {
@@ -28,11 +30,14 @@ public class PropuestaService {
     private final AltaDePropuesta alta;
     private final TransporteClient transporte;
     private final ViajesActivosPorUnidad viajesActivos;
+    private final PropuestaRepository propuestas;
     private final UsuarioActual usuarioActual;
 
     public PropuestaService(CargaRepository cargas, AltaDePropuesta alta, TransporteClient transporte,
-                            ViajesActivosPorUnidad viajesActivos, UsuarioActual usuarioActual) {
+                            ViajesActivosPorUnidad viajesActivos, PropuestaRepository propuestas,
+                            UsuarioActual usuarioActual) {
         this.viajesActivos = viajesActivos;
+        this.propuestas = propuestas;
         this.cargas = cargas;
         this.alta = alta;
         this.transporte = transporte;
@@ -76,6 +81,50 @@ public class PropuestaService {
         }
 
         return PropuestaResponse.desde(alta.crear(cargaId, nueva(carga, pedido, transportistaSub, unidad)));
+    }
+
+    /** Lo que recibió el dador por su carga, de la más vieja a la más nueva. Solo su dueño la ve (RN-T1). */
+    @Transactional(readOnly = true)
+    public List<PropuestaResponse> listarDeLaCarga(Long cargaId) {
+        Carga carga = cargas.findById(cargaId).orElseThrow(() -> new RecursoNoEncontradoException("Carga", cargaId));
+        if (!carga.getDadorSub().equals(usuarioActual.id())) {
+            throw new AccesoDenegadoException("No sos el dador de esta carga");
+        }
+        return propuestas.findByCargaIdOrderByCreadaEnAscIdAsc(cargaId).stream().map(PropuestaResponse::desde).toList();
+    }
+
+    /** El transportista se baja mientras el dador no decidió. La carga sigue CON_PROPUESTAS: ya recibió al menos una. */
+    @Transactional
+    public void retirar(Long propuestaId) {
+        Propuesta propuesta = bloquear(propuestaId);
+        if (!propuesta.getTransportistaSub().equals(usuarioActual.id())) {
+            throw new AccesoDenegadoException("Esta propuesta no es tuya");
+        }
+        validarPendiente(propuesta);
+        propuesta.setEstado(EstadoPropuesta.RETIRADA);
+    }
+
+    /** RN-03: el dador rechaza y no hay renegociación. La carga sigue abierta para las demás propuestas. */
+    @Transactional
+    public PropuestaResponse rechazar(Long propuestaId) {
+        Propuesta propuesta = bloquear(propuestaId);
+        if (!propuesta.getCarga().getDadorSub().equals(usuarioActual.id())) {
+            throw new AccesoDenegadoException("No sos el dador de esta carga");
+        }
+        validarPendiente(propuesta);
+        propuesta.setEstado(EstadoPropuesta.RECHAZADA);
+        return PropuestaResponse.desde(propuesta);
+    }
+
+    private Propuesta bloquear(Long propuestaId) {
+        return propuestas.bloquearParaCambiarEstado(propuestaId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Propuesta", propuestaId));
+    }
+
+    private static void validarPendiente(Propuesta propuesta) {
+        if (propuesta.getEstado() != EstadoPropuesta.PENDIENTE) {
+            throw new ConflictoException("La propuesta ya no está pendiente (está " + propuesta.getEstado() + ")");
+        }
     }
 
     /** RN-04. Los motivos los da transporte-service, que es quien sabe qué le falta a la unidad. */

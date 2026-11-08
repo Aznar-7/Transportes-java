@@ -28,6 +28,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -238,6 +241,106 @@ class PropuestaControllerTest {
         mockMvc.perform(post("/api/cargas/1/propuestas").header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR)
                         .contentType(MediaType.APPLICATION_JSON).content(aceptaPrecio(1L, 1L)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void elDadorVeLasPropuestasDeSuCarga() throws Exception {
+        Carga carga = fixture.cargaAbierta();
+        Long primera = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva(), "sub-transportista1").getId();
+        Long segunda = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva(), "sub-transportista2").getId();
+
+        mockMvc.perform(get("/api/cargas/" + carga.getId() + "/propuestas")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", contains(primera.intValue(), segunda.intValue())))
+                .andExpect(jsonPath("$[0].transportistaSub").doesNotExist());
+    }
+
+    @Test
+    void otroDadorNoVeLasPropuestas() throws Exception {
+        mockMvc.perform(get("/api/cargas/" + fixture.cargaAbierta().getId() + "/propuestas")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.OTRO_DADOR))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unTransportistaNoVeLasPropuestasDeLaCarga() throws Exception {
+        mockMvc.perform(get("/api/cargas/" + fixture.cargaAbierta().getId() + "/propuestas")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void elTransportistaRetiraSuPropuestaPendiente() throws Exception {
+        Propuesta propuesta = fixture.propuestaPendiente(fixture.cargaAbierta(), ViajesDePrueba.unidadNueva());
+
+        mockMvc.perform(delete("/api/cargas/propuestas/" + propuesta.getId())
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
+                .andExpect(status().isNoContent());
+
+        assertThat(propuesta.getEstado()).isEqualTo(EstadoPropuesta.RETIRADA);
+    }
+
+    @Test
+    void otroTransportistaNoPuedeRetirarla() throws Exception {
+        Propuesta propuesta = fixture.propuestaPendiente(fixture.cargaAbierta(), ViajesDePrueba.unidadNueva());
+
+        mockMvc.perform(delete("/api/cargas/propuestas/" + propuesta.getId())
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TERCERO))
+                .andExpect(status().isForbidden());
+
+        assertThat(propuesta.getEstado()).isEqualTo(EstadoPropuesta.PENDIENTE);
+    }
+
+    @Test
+    void retirarUnaQueYaNoEstaPendienteDevuelve409() throws Exception {
+        Propuesta propuesta = fixture.propuestaPendiente(fixture.cargaAbierta(), ViajesDePrueba.unidadNueva());
+        propuesta.setEstado(EstadoPropuesta.ACEPTADA);
+
+        mockMvc.perform(delete("/api/cargas/propuestas/" + propuesta.getId())
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void retirarUnaQueNoExisteDevuelve404() throws Exception {
+        mockMvc.perform(delete("/api/cargas/propuestas/999999")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.TRANSPORTISTA))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void elDadorRechazaUnaYLaCargaSigueAbierta() throws Exception {
+        Carga carga = fixture.cargaAbierta();
+        Propuesta propuesta = fixture.propuestaPendiente(carga, ViajesDePrueba.unidadNueva());
+
+        mockMvc.perform(post("/api/cargas/propuestas/" + propuesta.getId() + "/rechazo")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("RECHAZADA"));
+
+        assertThat(carga.getEstado()).isEqualTo(EstadoCarga.CON_PROPUESTAS);
+    }
+
+    @Test
+    void otroDadorNoPuedeRechazarla() throws Exception {
+        Propuesta propuesta = fixture.propuestaPendiente(fixture.cargaAbierta(), ViajesDePrueba.unidadNueva());
+
+        mockMvc.perform(post("/api/cargas/propuestas/" + propuesta.getId() + "/rechazo")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.OTRO_DADOR))
+                .andExpect(status().isForbidden());
+
+        assertThat(propuesta.getEstado()).isEqualTo(EstadoPropuesta.PENDIENTE);
+    }
+
+    @Test
+    void rechazarUnaQueYaNoEstaPendienteDevuelve409() throws Exception {
+        Propuesta propuesta = fixture.propuestaPendiente(fixture.cargaAbierta(), ViajesDePrueba.unidadNueva());
+        propuesta.setEstado(EstadoPropuesta.RETIRADA);
+
+        mockMvc.perform(post("/api/cargas/propuestas/" + propuesta.getId() + "/rechazo")
+                        .header(HttpHeaders.AUTHORIZATION, TokensDePrueba.DADOR))
+                .andExpect(status().isConflict());
     }
 
     ResultActions proponer(Long cargaId, String cuerpo) throws Exception {
