@@ -45,6 +45,7 @@
   ],
   "users": [
     {
+      "id": "2a460ca2-d515-5ab9-ba99-31a71e3c5ce9",
       "username": "transportista1",
       "enabled": true,
       "email": "transportista1@flety.test",
@@ -57,6 +58,7 @@
       "realmRoles": ["TRANSPORTISTA"]
     },
     {
+      "id": "d81e87ab-cb33-527f-a566-210fb44488a7",
       "username": "transportista2",
       "enabled": true,
       "email": "transportista2@flety.test",
@@ -69,6 +71,7 @@
       "realmRoles": ["TRANSPORTISTA"]
     },
     {
+      "id": "a70f72f9-4fcc-52d8-b17c-7102ea5b390a",
       "username": "dador1",
       "enabled": true,
       "email": "dador1@flety.test",
@@ -81,6 +84,20 @@
       "realmRoles": ["DADOR"]
     },
     {
+      "id": "8c1b9874-8ee3-579d-ad3a-ee13431c20ab",
+      "username": "dador2",
+      "enabled": true,
+      "email": "dador2@flety.test",
+      "emailVerified": true,
+      "firstName": "Dador",
+      "lastName": "Dos",
+      "credentials": [
+        { "type": "password", "value": "dador2", "temporary": false }
+      ],
+      "realmRoles": ["DADOR"]
+    },
+    {
+      "id": "96cf521d-f5d4-56e2-9c2e-564f426809e5",
       "username": "operador1",
       "enabled": true,
       "email": "operador1@flety.test",
