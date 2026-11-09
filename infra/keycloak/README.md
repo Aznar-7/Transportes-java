@@ -14,6 +14,7 @@
 | `transportista1` | `transportista1` | `TRANSPORTISTA` |
 | `transportista2` | `transportista2` | `TRANSPORTISTA` |
 | `dador1` | `dador1` | `DADOR` |
+| `dador2` | `dador2` | `DADOR` |
 | `operador1` | `operador1` | `OPERADOR` |
 
 **Cada usuario tiene un `id` fijo en el JSON**, y ese `id` es el `sub` de sus tokens. Keycloak guarda los usuarios en su base embebida, dentro del contenedor: cuando el contenedor se recrea (`docker compose down`, `up --force-recreate` o un cambio en el compose), vuelve a importar el realm. Sin un `id` fijo, cada import inventa uno nuevo, y los datos de Postgres (que sí persisten en su volumen) quedan a nombre de un `sub` que ya no existe: el transportista ve "Todavía no registraste tu organización" y tampoco puede registrarse de nuevo, porque su CUIT ya está. Para agregar un usuario, generá su `id` igual que los demás (UUIDv5 del nombre de usuario):
@@ -22,7 +23,7 @@
 python -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_URL, 'https://flety/usuarios/NOMBRE'))"
 ```
 
-`transportista2` existe para probar el control de dueño (RN-T1): tiene el mismo rol que `transportista1`, así que si pide un recurso de `transportista1` el Gateway lo deja pasar y el 403 lo tiene que dar el servicio.
+`transportista2` y `dador2` existen para probar el control de dueño (RN-T1): tienen el mismo rol que `transportista1` y `dador1`, así que si piden un recurso del otro el Gateway los deja pasar y el 403 lo tiene que dar el servicio. Con `dador2` también se prueba RN-07: hasta que registra su organización, no puede publicar cargas (422).
 
 Si el contenedor de Keycloak ya existía, el realm no se vuelve a importar y los cambios de este archivo no se aplican: Keycloak saltea los realms que ya tiene. Para tomarlos, recreá el contenedor:
 

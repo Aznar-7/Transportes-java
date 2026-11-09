@@ -84,6 +84,19 @@
       "realmRoles": ["DADOR"]
     },
     {
+      "id": "8c1b9874-8ee3-579d-ad3a-ee13431c20ab",
+      "username": "dador2",
+      "enabled": true,
+      "email": "dador2@flety.test",
+      "emailVerified": true,
+      "firstName": "Dador",
+      "lastName": "Dos",
+      "credentials": [
+        { "type": "password", "value": "dador2", "temporary": false }
+      ],
+      "realmRoles": ["DADOR"]
+    },
+    {
       "id": "96cf521d-f5d4-56e2-9c2e-564f426809e5",
       "username": "operador1",
       "enabled": true,
