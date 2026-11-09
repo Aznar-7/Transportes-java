@@ -14,4 +14,7 @@ public interface DocumentoRepository extends JpaRepository<Documento, Long> {
 
     @EntityGraph(attributePaths = "tipo")
     List<Documento> findByEstado(EstadoDocumento estado);
+
+    @EntityGraph(attributePaths = "tipo")
+    List<Documento> findByUnidadIdAndEstado(Long unidadId, EstadoDocumento estado);
 }

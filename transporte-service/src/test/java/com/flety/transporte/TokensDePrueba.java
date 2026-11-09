@@ -20,6 +20,8 @@ public class TokensDePrueba {
     public static final String TRANSPORTISTA = "Bearer token-transportista1";
     public static final String OTRO_TRANSPORTISTA = "Bearer token-transportista2";
     public static final String OPERADOR = "Bearer token-operador1";
+    /** Los /internal los llama cargas-service con el token del usuario, que suele ser un dador (flujo C). */
+    public static final String DADOR_PARA_INTERNO = "Bearer token-dador1";
 
     @Bean
     JwtDecoder jwtDecoder() {
@@ -27,6 +29,7 @@ public class TokensDePrueba {
             case "token-transportista1" -> jwt(token, "sub-transportista1", "TRANSPORTISTA");
             case "token-transportista2" -> jwt(token, "sub-transportista2", "TRANSPORTISTA");
             case "token-operador1" -> jwt(token, "sub-operador1", "OPERADOR");
+            case "token-dador1" -> jwt(token, "sub-dador1", "DADOR");
             default -> throw new BadJwtException("Firma inválida");
         };
     }
