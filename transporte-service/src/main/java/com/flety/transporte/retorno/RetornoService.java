@@ -1,11 +1,15 @@
 package com.flety.transporte.retorno;
 
+import com.flety.commons.contrato.RetornoInternoDTO;
+import com.flety.commons.excepciones.AccesoDenegadoException;
+import com.flety.commons.excepciones.RecursoNoEncontradoException;
 import com.flety.commons.excepciones.ServicioExternoException;
 import com.flety.commons.geo.Coordenada;
 import com.flety.commons.geo.GeoUtils;
 import com.flety.commons.geo.GeorefClient;
 import com.flety.commons.geo.RoutingClient;
 import com.flety.commons.geo.Ruta;
+import com.flety.commons.seguridad.UsuarioActual;
 import com.flety.transporte.retorno.dto.LugarRequest;
 import com.flety.transporte.retorno.dto.PublicarRetornoRequest;
 import com.flety.transporte.retorno.dto.RetornoResponse;
@@ -30,13 +34,15 @@ public class RetornoService {
 
     private final RetornoRepository repository;
     private final UnidadService unidades;
+    private final UsuarioActual usuarioActual;
     private final ObjectProvider<GeorefClient> georef;
     private final ObjectProvider<RoutingClient> routing;
 
-    public RetornoService(RetornoRepository repository, UnidadService unidades,
+    public RetornoService(RetornoRepository repository, UnidadService unidades, UsuarioActual usuarioActual,
                           ObjectProvider<GeorefClient> georef, ObjectProvider<RoutingClient> routing) {
         this.repository = repository;
         this.unidades = unidades;
+        this.usuarioActual = usuarioActual;
         this.georef = georef;
         this.routing = routing;
     }
@@ -58,6 +64,47 @@ public class RetornoService {
         Retorno retorno = new Retorno(unidad, origen, destino, pedido.salidaDesde(), pedido.salidaHasta(),
                 pedido.desvioMaximoKmOPorDefecto(), ruta, aproximada);
         return RetornoResponse.desde(repository.save(retorno));
+    }
+
+    /** Los retornos del usuario actual, por fecha de salida. Con estado null trae todos. */
+    @Transactional(readOnly = true)
+    public List<RetornoResponse> listarPropios(EstadoRetorno estado) {
+        String sub = usuarioActual.id();
+        List<Retorno> retornos = estado == null
+                ? repository.findByUnidadTransportistaOwnerSubOrderBySalidaDesde(sub)
+                : repository.findByUnidadTransportistaOwnerSubAndEstadoOrderBySalidaDesde(sub, estado);
+        return retornos.stream().map(RetornoResponse::desde).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public RetornoResponse ver(Long id) {
+        return RetornoResponse.desde(propio(id));
+    }
+
+    @Transactional
+    public void cancelar(Long id) {
+        propio(id).cancelar();
+    }
+
+    /** Para cargas-service (flujo A): no verifica dueño, devuelve el transportistaSub y lo controla cargas. */
+    @Transactional(readOnly = true)
+    public RetornoInternoDTO interno(Long id) {
+        Retorno r = repository.findById(id).orElseThrow(() -> new RecursoNoEncontradoException("Retorno", id));
+        Unidad unidad = r.getUnidad();
+        return new RetornoInternoDTO(r.getId(), unidad.getTransportista().getId(), unidad.getId(), r.getEstado().name(),
+                r.getOrigen().comoDTO(), r.getDestino().comoDTO(), r.getSalidaDesde(), r.getSalidaHasta(),
+                r.getDesvioMaximoKm(), r.getRutaDistanciaKm(), r.getRutaDuracionMin(), r.getRutaPuntos(),
+                r.isRutaAproximada(), unidad.getTipoCarroceria(), unidad.getCapacidadToneladas(),
+                unidad.getCapacidadM3(), unidad.getTransportista().getOwnerSub());
+    }
+
+    /** El retorno si es del usuario actual (RN-T1): 404 si no existe, 403 si es de otro transportista. */
+    private Retorno propio(Long id) {
+        Retorno retorno = repository.findById(id).orElseThrow(() -> new RecursoNoEncontradoException("Retorno", id));
+        if (!retorno.getUnidad().getTransportista().getOwnerSub().equals(usuarioActual.id())) {
+            throw new AccesoDenegadoException("El retorno no es tuyo");
+        }
+        return retorno;
     }
 
     /** Si el cliente mandó coordenadas se usan; si no, Georef. Nunca se inventa un valor (503 si no se puede). */
