@@ -8,14 +8,14 @@ import java.time.Duration;
 
 /**
  * Fábrica para construir instancias y builders de RestClient con timeouts homogéneos (FLY-35).
- *
+ * <p>
  * Aplica por defecto las decisiones de arquitectura de Flety:
- *
- *     Timeout de conexión: 2 segundos.
- *     Timeout de lectura: 5 segundos.
- *     Reenvío transparente del token del usuario con {@link ReenvioTokenInterceptor}.
- *     Un único reintento en GET y mapeo de errores con {@link ReintentoGetInterceptor}.
- *
+ * <ul>
+ *     <li>Timeout de conexión: 2 segundos.</li>
+ *     <li>Timeout de lectura: 5 segundos.</li>
+ *     <li>Reenvío transparente del token del usuario con {@link ReenvioTokenInterceptor}.</li>
+ *     <li>Un único reintento en GET y mapeo de errores con {@link ReintentoGetInterceptor}.</li>
+ * </ul>
  */
 
 public final class FabricaRestClient {
@@ -44,6 +44,10 @@ public final class FabricaRestClient {
         factory.setConnectTimeout(timeoutConexion);
         factory.setReadTimeout(timeoutLectura);
 
+        // El orden de los interceptores es relevante: ReenvioTokenInterceptor va primero y
+        // ReintentoGetInterceptor al final. ReintentoGetInterceptor ejecuta execution.execute(...)
+        // dos veces en caso de reintento, lo cual funciona solo porque es el último de la cadena;
+        // si hubiera otro interceptor posterior, el reintento lo saltearía.
         return RestClient.builder()
                 .requestFactory(factory)
                 .requestInterceptor(new ReenvioTokenInterceptor())

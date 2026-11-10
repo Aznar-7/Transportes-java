@@ -48,7 +48,10 @@ public class ReintentoGetInterceptor implements ClientHttpRequestInterceptor {
             return response;
         }
 
-        // Intento 2 (Único reintento permitido)
+        // Intento 2 (Único reintento permitido).
+        // NOTA: Invocar execution.execute(...) dos veces funciona únicamente porque este
+        // interceptor se ubica como el último eslabón de la cadena (fijado por FabricaRestClient).
+        // Si existiera otro interceptor posterior en la cadena, el reintento lo saltearía.
         try {
             ClientHttpResponse retryResponse = execution.execute(request, body);
             if (retryResponse.getStatusCode().is5xxServerError()) {
