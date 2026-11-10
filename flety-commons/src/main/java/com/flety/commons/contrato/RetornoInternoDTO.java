@@ -14,6 +14,7 @@ import java.util.List;
  * @param estado          PUBLICADO, VENCIDO o CANCELADO (el enum vive en transporte-service, acá viaja como texto)
  * @param rutaPuntos      puntos de la ruta calculada; si la ruta es aproximada son solo origen y destino
  * @param rutaAproximada  true si la API de rutas falló y se usó la línea recta
+ * @param transportistaSub sub del JWT del transportista dueño: cargas-service lo compara con el token (RN-T1)
  */
 public record RetornoInternoDTO(
         Long id,
@@ -31,7 +32,8 @@ public record RetornoInternoDTO(
         boolean rutaAproximada,
         TipoCarroceria tipoCarroceria,
         BigDecimal capacidadToneladas,
-        BigDecimal capacidadM3
+        BigDecimal capacidadM3,
+        String transportistaSub
 ) {
     public RetornoInternoDTO {
         rutaPuntos = rutaPuntos == null ? List.of() : List.copyOf(rutaPuntos);

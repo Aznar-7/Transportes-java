@@ -1,6 +1,7 @@
 {
   "id": 8,
   "transportistaId": 3,
+  "transportistaSub": "sub-transportista1",
   "unidadId": 12,
   "estado": "PUBLICADO",
   "origen": { "provincia": "Mendoza", "localidad": "Mendoza", "lat": -32.8895, "lng": -68.8458 },

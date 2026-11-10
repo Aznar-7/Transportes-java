@@ -11,6 +11,7 @@ import java.util.List;
  * @param habilitada            true si el transportista está VERIFICADO y los documentos obligatorios están aprobados y vigentes
  * @param motivos               por qué no está habilitada (vacío si lo está), en texto para mostrar
  * @param sumaAseguradaCarga    suma asegurada de la póliza de carga; null si no tiene una aprobada
+ * @param transportistaSub      sub del JWT del transportista dueño: cargas-service lo compara con el token (RN-T1)
  */
 public record HabilitacionUnidadDTO(
         Long unidadId,
@@ -23,7 +24,8 @@ public record HabilitacionUnidadDTO(
         BigDecimal sumaAseguradaCarga,
         Long transportistaId,
         String transportistaRazonSocial,
-        String transportistaTelefono
+        String transportistaTelefono,
+        String transportistaSub
 ) {
     public HabilitacionUnidadDTO {
         motivos = motivos == null ? List.of() : List.copyOf(motivos);

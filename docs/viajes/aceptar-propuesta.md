@@ -30,7 +30,7 @@ El cuerpo es opcional. Solo hace falta cuando la propuesta dice `requiereAceptac
    - la propuesta queda ACEPTADA y las demás pendientes de la carga quedan RECHAZADA;
    - la carga queda ASIGNADA.
 
-El contacto del dador queda vacío hasta que mercado tenga la entidad `Dador` (FLY-19).
+El contacto del dador se copia de su organización. Una carga publicada antes de que se exigiera (RN-07) queda sin ese contacto, y eso no frena la aceptación.
 
 ## Dos aceptaciones a la vez
 

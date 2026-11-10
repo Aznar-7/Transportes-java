@@ -28,13 +28,13 @@ public class TransporteDePrueba {
     public static HabilitacionUnidadDTO habilitada(Long unidadId) {
         return new HabilitacionUnidadDTO(unidadId, true, List.of(), "AB123CD", TipoCarroceria.SIDER,
                 new BigDecimal("28.00"), new BigDecimal("90.00"), new BigDecimal("50000000.00"),
-                3L, "Transportes Pérez SRL", "+54 351 555-1234");
+                3L, "Transportes Pérez SRL", "+54 351 555-1234", "sub-transportista1");
     }
 
     /** La misma unidad, pero con documentos que no llegan a la fecha del viaje. */
     public static HabilitacionUnidadDTO noHabilitada(Long unidadId, String... motivos) {
         return new HabilitacionUnidadDTO(unidadId, false, List.of(motivos), "AB123CD", TipoCarroceria.SIDER,
                 new BigDecimal("28.00"), new BigDecimal("90.00"), new BigDecimal("50000000.00"),
-                3L, "Transportes Pérez SRL", "+54 351 555-1234");
+                3L, "Transportes Pérez SRL", "+54 351 555-1234", "sub-transportista1");
     }
 }
