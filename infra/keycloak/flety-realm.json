@@ -57,6 +57,18 @@
       "realmRoles": ["TRANSPORTISTA"]
     },
     {
+      "username": "transportista2",
+      "enabled": true,
+      "email": "transportista2@flety.test",
+      "emailVerified": true,
+      "firstName": "Transportista",
+      "lastName": "Dos",
+      "credentials": [
+        { "type": "password", "value": "transportista2", "temporary": false }
+      ],
+      "realmRoles": ["TRANSPORTISTA"]
+    },
+    {
       "username": "dador1",
       "enabled": true,
       "email": "dador1@flety.test",
