@@ -1,5 +1,6 @@
 package com.flety.commons.seguridad;
 
+import com.flety.commons.http.HttpProperties;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -33,7 +34,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 @AutoConfiguration(before = {ServletWebSecurityAutoConfiguration.class,
         OAuth2ResourceServerWebSecurityAutoConfiguration.class, UserDetailsServiceAutoConfiguration.class})
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@EnableConfigurationProperties(SeguridadProperties.class)
+@EnableConfigurationProperties({SeguridadProperties.class, HttpProperties.class})
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SeguridadAutoConfiguration {
@@ -48,16 +49,20 @@ public class SeguridadAutoConfiguration {
         return new UsuarioActual();
     }
 
-    /** Interceptor que reenvía el token JWT del usuario actual en llamadas HTTP salientes (FLY-35). */
+    /** Interceptor que reenvía el token JWT del usuario actual solo a servicios internos (FLY-35). */
     @Bean
     @ConditionalOnMissingBean
-    public ReenvioTokenInterceptor reenvioTokenInterceptor() {
-        return new ReenvioTokenInterceptor();
+    public ReenvioTokenInterceptor reenvioTokenInterceptor(HttpProperties httpProperties) {
+        return new ReenvioTokenInterceptor(httpProperties.hostsInternos());
     }
 
-    /** Configura RestClient.Builder para registrar el interceptor de reenvío de token automáticamente. */
+    /**
+     * Configura RestClient.Builder para registrar el interceptor de reenvío de token automáticamente.
+     * Se condiciona por nombre específico de bean para no ser descartado cuando convive con otros
+     * RestClientCustomizer registrados por Spring Boot (como httpMessageConvertersRestClientCustomizer).
+     */
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(name = "reenvioTokenRestClientCustomizer")
     @ConditionalOnClass(RestClientCustomizer.class)
     public RestClientCustomizer reenvioTokenRestClientCustomizer(ReenvioTokenInterceptor interceptor) {
         return builder -> builder.requestInterceptor(interceptor);
