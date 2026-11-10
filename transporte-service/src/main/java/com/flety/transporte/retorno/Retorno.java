@@ -1,5 +1,6 @@
 package com.flety.transporte.retorno;
 
+import com.flety.commons.excepciones.ConflictoException;
 import com.flety.commons.geo.Coordenada;
 import com.flety.commons.geo.Ruta;
 import com.flety.transporte.unidad.Unidad;
@@ -95,6 +96,24 @@ public class Retorno {
         ruta.puntos().forEach(p -> rutaPuntos.add(new PuntoRuta(p)));
         this.rutaAproximada = rutaAproximada;
         this.estado = EstadoRetorno.PUBLICADO;
+    }
+
+    /** Baja lógica: el retorno queda en la base como CANCELADO, para que no se pierda su historia. */
+    public void cancelar() {
+        exigirPublicado();
+        estado = EstadoRetorno.CANCELADO;
+    }
+
+    /** Lo usa el reloj de FLY-15 cuando pasa la ventana de salida (RN-17). */
+    public void vencer() {
+        exigirPublicado();
+        estado = EstadoRetorno.VENCIDO;
+    }
+
+    private void exigirPublicado() {
+        if (estado != EstadoRetorno.PUBLICADO) {
+            throw new ConflictoException("El retorno ya está " + estado);
+        }
     }
 
     public Long getId() { return id; }

@@ -1,6 +1,8 @@
 package com.flety.transporte.habilitacion;
 
 import com.flety.commons.contrato.HabilitacionUnidadDTO;
+import com.flety.commons.contrato.RetornoInternoDTO;
+import com.flety.transporte.retorno.RetornoService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,9 +21,16 @@ import java.time.Instant;
 public class InternoController {
 
     private final HabilitacionService habilitacion;
+    private final RetornoService retornos;
 
-    public InternoController(HabilitacionService habilitacion) {
+    public InternoController(HabilitacionService habilitacion, RetornoService retornos) {
         this.habilitacion = habilitacion;
+        this.retornos = retornos;
+    }
+
+    @GetMapping("/retornos/{id}")
+    public RetornoInternoDTO retorno(@PathVariable Long id) {
+        return retornos.interno(id);
     }
 
     @GetMapping("/unidades/{id}/habilitacion")
