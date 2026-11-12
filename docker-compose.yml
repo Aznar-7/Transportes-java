@@ -117,13 +117,9 @@ services:
     networks:
       - flety-net
 
-  # El gateway es la FLY-14 y todavía no está en el repo: queda detrás del profile "gateway" para que
-  # docker compose up no falle buscando la carpeta. Cuando exista gateway-service/, se levanta con
-  #   docker compose --profile gateway up -d --build
-  # y al terminar la FLY-14 se le saca el profile. Las variables de abajo son las que le deja preparadas
-  # este compose: la FLY-14 tiene que leer esos nombres (o avisar para cambiarlos acá).
+  # El gateway (FLY-14): Spring Cloud Gateway, valida el JWT y el rol por ruta y reenvía a cada servicio.
+  # Lee TRANSPORTE_URL, CARGAS_URL y JWK_SET_URI con estos mismos nombres.
   gateway-service:
-    profiles: ["gateway"]
     build:
       context: .
       args:
