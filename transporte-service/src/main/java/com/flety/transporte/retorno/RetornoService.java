@@ -21,6 +21,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -64,6 +65,14 @@ public class RetornoService {
         Retorno retorno = new Retorno(unidad, origen, destino, pedido.salidaDesde(), pedido.salidaHasta(),
                 pedido.desvioMaximoKmOPorDefecto(), ruta, aproximada);
         return RetornoResponse.desde(repository.save(retorno));
+    }
+
+    /** RN-17: pasa a VENCIDO los retornos publicados cuya ventana de salida ya terminó. Devuelve cuántos venció. */
+    @Transactional
+    public int vencerPasados(Instant ahora) {
+        List<Retorno> pasados = repository.findByEstadoAndSalidaHastaBefore(EstadoRetorno.PUBLICADO, ahora);
+        pasados.forEach(Retorno::vencer);
+        return pasados.size();
     }
 
     /** Los retornos del usuario actual, por fecha de salida. Con estado null trae todos. */

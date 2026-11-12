@@ -69,6 +69,13 @@ public class Documento {
         motivoRechazo = motivo;
     }
 
+    /** RN-05: lo llama el reloj diario cuando la vigencia ya pasó. Un rechazado queda como está. */
+    public void vencer() {
+        if (estado == EstadoDocumento.EN_REVISION || estado == EstadoDocumento.APROBADO) {
+            estado = EstadoDocumento.VENCIDO;
+        }
+    }
+
     private void exigirEnRevision() {
         if (estado != EstadoDocumento.EN_REVISION) {
             throw new ConflictoException("El documento ya fue revisado");
