@@ -2,6 +2,7 @@ package com.flety.commons.geo;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.flety.commons.excepciones.ServicioExternoException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
@@ -21,12 +22,16 @@ import java.util.Objects;
  *     <li>Consulta la ruta entre dos o más coordenadas por POST a {@code /v2/directions/driving-car/geojson}.</li>
  *     <li>Envía las coordenadas en formato GeoJSON [longitud, latitud].</li>
  *     <li>Convierte la distancia a kilómetros y la duración a minutos en {@link Ruta}.</li>
+ *     <li>La clave de la API se lee de la variable de entorno {@code OPENROUTESERVICE_API_KEY} (o {@code ORS_API_KEY}) y se envía en el encabezado {@code Authorization}.</li>
  *     <li>Si la API no responde, se cae o responde sin ruta, lanza {@link ServicioExternoException}.</li>
  * </ul>
  */
 public class OpenRouteServiceClientHttp implements RoutingClient {
 
     public static final String URL_BASE_DEFAULT = "https://api.openrouteservice.org";
+
+    /** Variable de entorno estándar para la clave de OpenRouteService. */
+    public static final String ENV_API_KEY = "OPENROUTESERVICE_API_KEY";
 
     /** Timeout de conexión por defecto: 2 segundos. */
     public static final Duration TIMEOUT_CONEXION_DEFAULT = Duration.ofSeconds(2);
@@ -35,24 +40,50 @@ public class OpenRouteServiceClientHttp implements RoutingClient {
     public static final Duration TIMEOUT_LECTURA_DEFAULT = Duration.ofSeconds(5);
 
     private final RestClient restClient;
+    private final String apiKey;
 
     public OpenRouteServiceClientHttp(RestClient restClient) {
         this.restClient = restClient;
+        this.apiKey = null;
     }
 
-    public OpenRouteServiceClientHttp(String baseUrl) {
-        this(baseUrl, TIMEOUT_CONEXION_DEFAULT, TIMEOUT_LECTURA_DEFAULT);
+    public OpenRouteServiceClientHttp(String baseUrl, String apiKey, Duration timeoutConexion, Duration timeoutLectura) {
+        this.apiKey = resolverApiKey(apiKey);
+        this.restClient = crearRestClient(baseUrl, this.apiKey, timeoutConexion, timeoutLectura);
     }
 
-    public OpenRouteServiceClientHttp(String baseUrl, Duration timeoutConexion, Duration timeoutLectura) {
-        this(crearRestClient(baseUrl, timeoutConexion, timeoutLectura));
+    public OpenRouteServiceClientHttp(String baseUrl, String apiKey) {
+        this(baseUrl, apiKey, TIMEOUT_CONEXION_DEFAULT, TIMEOUT_LECTURA_DEFAULT);
+    }
+
+    public OpenRouteServiceClientHttp(String apiKey) {
+        this(URL_BASE_DEFAULT, apiKey);
     }
 
     public OpenRouteServiceClientHttp() {
-        this(URL_BASE_DEFAULT);
+        this(URL_BASE_DEFAULT, null, TIMEOUT_CONEXION_DEFAULT, TIMEOUT_LECTURA_DEFAULT);
     }
 
-    private static RestClient crearRestClient(String baseUrl, Duration timeoutConexion, Duration timeoutLectura) {
+    /**
+     * Resuelve la clave de la API priorizando el parámetro explícito y, si es nulo o vacío,
+     * buscándola en las variables de entorno OPENROUTESERVICE_API_KEY u ORS_API_KEY.
+     */
+    static String resolverApiKey(String apiKeyExplicita) {
+        if (apiKeyExplicita != null && !apiKeyExplicita.isBlank()) {
+            return apiKeyExplicita.trim();
+        }
+        String envKey = System.getenv(ENV_API_KEY);
+        if (envKey != null && !envKey.isBlank()) {
+            return envKey.trim();
+        }
+        String fallbackKey = System.getenv("ORS_API_KEY");
+        if (fallbackKey != null && !fallbackKey.isBlank()) {
+            return fallbackKey.trim();
+        }
+        return null;
+    }
+
+    private static RestClient crearRestClient(String baseUrl, String apiKey, Duration timeoutConexion, Duration timeoutLectura) {
         // Configuramos SimpleClientHttpRequestFactory con los timeouts estándar (2s conexión, 5s lectura).
         // Se utiliza SimpleClientHttpRequestFactory directamente para mantener la independencia de las ramas
         // y aplicar el principio de menor acoplamiento, evitando acoplar un cliente externo público a la fábrica
@@ -61,10 +92,19 @@ public class OpenRouteServiceClientHttp implements RoutingClient {
         factory.setConnectTimeout(timeoutConexion);
         factory.setReadTimeout(timeoutLectura);
 
-        return RestClient.builder()
+        RestClient.Builder builder = RestClient.builder()
                 .baseUrl(baseUrl)
-                .requestFactory(factory)
-                .build();
+                .requestFactory(factory);
+
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.defaultHeader(HttpHeaders.AUTHORIZATION, apiKey);
+        }
+
+        return builder.build();
+    }
+
+    public String getApiKey() {
+        return apiKey;
     }
 
     @Override
@@ -152,4 +192,3 @@ public class OpenRouteServiceClientHttp implements RoutingClient {
     record Summary(Double distance, Double duration) {
     }
 }
-
