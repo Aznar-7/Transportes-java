@@ -1,10 +1,7 @@
 package com.flety.transporte;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -18,13 +15,11 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Igual que en cargas-service: todos los errores salen como ProblemDetail (GlobalExceptionHandler de flety-commons),
  * así que se completa una sola vez acá para cada respuesta 4xx y 5xx en vez de repetirlo en cada @ApiResponse.
- * El esquema Bearer habilita el botón Authorize hasta que llegue la configuración común de FLY-38.
+ * El esquema Bearer y el botón Authorize vienen configurados de forma común desde flety-commons (FLY-38).
  */
 @Configuration
 @OpenAPIDefinition(info = @Info(title = "transporte-service", version = "1.0",
-        description = "Transportistas, unidades, documentos, habilitación y retornos"),
-        security = @SecurityRequirement(name = "bearer"))
-@SecurityScheme(name = "bearer", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
+        description = "Transportistas, unidades, documentos, habilitación y retornos"))
 public class SwaggerConfig {
 
     private static final String PROBLEM_JSON = "application/problem+json";

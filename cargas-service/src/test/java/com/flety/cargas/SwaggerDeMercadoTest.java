@@ -81,6 +81,16 @@ class SwaggerDeMercadoTest {
         assertThat(esquemas.path("ProponerRequest").path("properties").has("precioCoherente")).isFalse();
     }
 
+    /** Esquema Bearer provisto por flety-commons (FLY-38) para el botón Authorize. */
+    @Test
+    void elSwaggerMuestraElEsquemaBearerComun() throws Exception {
+        JsonNode bearer = apiDocs().path("components").path("securitySchemes").path("bearer");
+
+        assertThat(bearer.path("type").asString()).isEqualTo("http");
+        assertThat(bearer.path("scheme").asString()).isEqualTo("bearer");
+        assertThat(bearer.path("bearerFormat").asString()).isEqualTo("JWT");
+    }
+
     private JsonNode apiDocs() throws Exception {
         String json = mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
