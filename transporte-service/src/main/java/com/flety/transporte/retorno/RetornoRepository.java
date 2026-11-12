@@ -3,6 +3,7 @@ package com.flety.transporte.retorno;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface RetornoRepository extends JpaRepository<Retorno, Long> {
@@ -13,4 +14,6 @@ public interface RetornoRepository extends JpaRepository<Retorno, Long> {
 
     @EntityGraph(attributePaths = "rutaPuntos")
     List<Retorno> findByUnidadTransportistaOwnerSubAndEstadoOrderBySalidaDesde(String ownerSub, EstadoRetorno estado);
+
+    List<Retorno> findByEstadoAndSalidaHastaBefore(EstadoRetorno estado, Instant ahora);
 }

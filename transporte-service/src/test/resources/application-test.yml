@@ -4,6 +4,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+# Los relojes se prueban llamando a cada service con una fecha fija, no esperando a que disparen.
+flety:
+  relojes:
+    habilitados: false
   # Con esto Spring arma el JwtDecoder sin buscar a Keycloak: las claves se piden recién cuando llega un token.
   security:
     oauth2:

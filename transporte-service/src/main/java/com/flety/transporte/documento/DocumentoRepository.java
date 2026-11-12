@@ -3,6 +3,7 @@ package com.flety.transporte.documento;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface DocumentoRepository extends JpaRepository<Documento, Long> {
@@ -14,6 +15,8 @@ public interface DocumentoRepository extends JpaRepository<Documento, Long> {
 
     @EntityGraph(attributePaths = "tipo")
     List<Documento> findByEstado(EstadoDocumento estado);
+
+    List<Documento> findByEstadoInAndVigenciaBefore(List<EstadoDocumento> estados, Instant ahora);
 
     @EntityGraph(attributePaths = "tipo")
     List<Documento> findByUnidadIdAndEstado(Long unidadId, EstadoDocumento estado);

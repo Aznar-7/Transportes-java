@@ -9,6 +9,7 @@ import com.flety.transporte.unidad.UnidadService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -40,6 +41,15 @@ public class DocumentoService {
         }
         Documento nuevo = new Documento(tipo, unidad, pedido.numero(), pedido.vigencia(), pedido.sumaAsegurada());
         return DocumentoResponse.desde(repository.save(nuevo));
+    }
+
+    /** RN-05: pasa a VENCIDO los documentos vigentes cuya vigencia ya se cumplió. Devuelve cuántos venció. */
+    @Transactional
+    public int vencerCumplidos(Instant ahora) {
+        List<Documento> cumplidos = repository.findByEstadoInAndVigenciaBefore(
+                List.of(EstadoDocumento.EN_REVISION, EstadoDocumento.APROBADO), ahora);
+        cumplidos.forEach(Documento::vencer);
+        return cumplidos.size();
     }
 
     /** Para el operador. Con estado null trae todos. */
