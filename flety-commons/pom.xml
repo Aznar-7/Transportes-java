@@ -47,6 +47,12 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-tx</artifactId>
         </dependency>
+        <!-- Anotaciones de Swagger / OpenAPI para configuración común (FLY-38) -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>2.2.9</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework</groupId>
