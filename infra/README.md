@@ -2,6 +2,8 @@
 
 Todo Flety (Postgres, Keycloak, transporte-service, cargas-service y el gateway) se levanta con un comando, usando el [`docker-compose.yml`](../docker-compose.yml) de la raíz del repo.
 
+Esta es la referencia de cada pieza. La guía paso a paso para armar y levantar todo, probarlo y correr un servicio fuera de Docker está en [docs/despliegue.md](../docs/despliegue.md).
+
 ## Requisitos
 
 - Docker Desktop (o Docker Engine con el plugin `docker compose` y BuildKit, que viene activado por defecto).
