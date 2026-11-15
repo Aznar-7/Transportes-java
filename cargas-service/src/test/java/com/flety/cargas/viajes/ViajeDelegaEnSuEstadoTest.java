@@ -80,17 +80,18 @@ class ViajeDelegaEnSuEstadoTest {
         assertThat(EstadosViaje.de(tipo).tipo()).isEqualTo(tipo);
     }
 
-    /** Los estados que completa FLY-31 todavía no permiten ninguna acción. */
+    /** Los estados finales no permiten ninguna acción. */
     @ParameterizedTest
-    @EnumSource(value = TipoEstadoViaje.class,
-            names = {"EN_DISPUTA", "CERRADO_CON_DISPUTA"})
-    void losEstadosQueFaltanNoPermitenNada(TipoEstadoViaje tipo) {
+    @EnumSource(value = TipoEstadoViaje.class, names = {"CONFORMADO", "CERRADO_CON_DISPUTA", "CANCELADO"})
+    void losEstadosFinalesNoPermitenNada(TipoEstadoViaje tipo) {
         EstadoViaje estado = EstadosViaje.de(tipo);
         Viaje viaje = EstadosDelViajeTest.viajeEnMemoria();
 
-        assertThat(estado).isInstanceOf(EstadoSinAcciones.class);
+        assertThat(tipo.cerrado()).isTrue();
         assertThatThrownBy(() -> estado.cargar(viaje, TRANSPORTISTA)).isInstanceOf(TransicionNoPermitidaException.class);
         assertThatThrownBy(() -> estado.cancelar(viaje, "motivo", TRANSPORTISTA))
+                .isInstanceOf(TransicionNoPermitidaException.class);
+        assertThatThrownBy(() -> estado.resolverDisputa(viaje, true, "x", "operador"))
                 .isInstanceOf(TransicionNoPermitidaException.class);
     }
 }

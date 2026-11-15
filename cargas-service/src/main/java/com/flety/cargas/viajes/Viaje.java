@@ -193,12 +193,21 @@ public class Viaje {
         estadoActual().conformar(this, por, actorSub);
     }
 
-    public void disputar(String motivo, String descripcion, String actorSub) {
+    /**
+     * @return la disputa abierta, para que el service la guarde (como el comprobante de la entrega). Si el estado o la
+     * ventana no lo permiten, la excepción sale antes y no se arma ninguna disputa.
+     */
+    public Disputa disputar(String motivo, String descripcion, String actorSub) {
         estadoActual().disputar(this, motivo, descripcion, actorSub);
+        return new Disputa(this, motivo, descripcion, actorSub);
     }
 
     public void cancelar(String motivo, String actorSub) {
         estadoActual().cancelar(this, motivo, actorSub);
+    }
+
+    public void resolverDisputa(boolean aFavorDelTransportista, String resolucion, String operadorSub) {
+        estadoActual().resolverDisputa(this, aFavorDelTransportista, resolucion, operadorSub);
     }
 
     /** Se resuelve en cada llamada a partir del enum guardado: no hay un segundo campo que pueda desincronizarse. */
@@ -224,9 +233,26 @@ public class Viaje {
      */
     void marcarConformado(ConformadoPor por, String actorSub) {
         this.conformadoPor = por;
-        cambiarEstado(TipoEstadoViaje.CONFORMADO, actorSub, por == ConformadoPor.DADOR
-                ? "Conformó el dador"
-                : "Conformidad automática: pasaron 48 h sin conformidad ni disputa");
+        cambiarEstado(TipoEstadoViaje.CONFORMADO, actorSub, switch (por) {
+            case DADOR -> "Conformó el dador";
+            case SISTEMA -> "Conformidad automática: pasaron 48 h sin conformidad ni disputa";
+            case OPERADOR -> "Disputa resuelta a favor del transportista";
+        });
+        carga.setEstado(EstadoCarga.CERRADA);
+    }
+
+    /** Lo llama Entregado al abrir una disputa: el viaje queda frenado hasta que un operador la resuelva. */
+    void marcarEnDisputa(String motivo, String actorSub) {
+        cambiarEstado(TipoEstadoViaje.EN_DISPUTA, actorSub, "Disputa abierta: " + motivo);
+    }
+
+    /**
+     * Lo llama EnDisputa cuando el operador resuelve en contra del transportista. El viaje terminó igual, así que la
+     * carga también queda CERRADA, en la misma transacción.
+     */
+    void marcarCerradoConDisputa(String resolucion, String operadorSub) {
+        cambiarEstado(TipoEstadoViaje.CERRADO_CON_DISPUTA, operadorSub, "Disputa resuelta en contra del transportista: "
+                + resolucion);
         carga.setEstado(EstadoCarga.CERRADA);
     }
 

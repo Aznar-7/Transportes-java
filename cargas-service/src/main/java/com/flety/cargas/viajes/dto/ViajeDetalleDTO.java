@@ -31,6 +31,7 @@ public record ViajeDetalleDTO(
         Instant ventanaConformidadHasta,
         ConformadoPor conformadoPor,
         CancelacionDTO cancelacion,
+        DisputaDTO disputa,
         List<EventoViajeDTO> lineaDeTiempo
 ) {
 

@@ -47,6 +47,15 @@ public interface EstadoViaje {
         throw noPermitida("cancelar");
     }
 
+    /**
+     * Un operador resuelve la disputa abierta (FLY-31): a favor del transportista el viaje queda CONFORMADO; si no,
+     * CERRADO_CON_DISPUTA. Es una séptima acción, aparte de las seis del diseño, porque la hace otro actor (el
+     * OPERADOR) y desde un estado propio (EN_DISPUTA); por defecto también está prohibida.
+     */
+    default void resolverDisputa(Viaje viaje, boolean aFavorDelTransportista, String resolucion, String operadorSub) {
+        throw noPermitida("resolver una disputa");
+    }
+
     private TransicionNoPermitidaException noPermitida(String accion) {
         return new TransicionNoPermitidaException(tipo(), accion);
     }

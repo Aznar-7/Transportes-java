@@ -1,5 +1,6 @@
 package com.flety.cargas.viajes;
 
+import com.flety.commons.excepciones.ConflictoException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,7 +18,7 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 /**
- * Un reclamo del dador sobre la entrega, abierto dentro de la ventana de conformidad (FLY-30).
+ * Un reclamo del dador sobre la entrega, abierto dentro de la ventana de conformidad (FLY-31).
  * Lo resuelve un OPERADOR (FLY-31). Los datos de la apertura no se editan; solo se completa la resolución.
  */
 @Entity
@@ -59,6 +60,9 @@ public class Disputa {
 
     private Instant resueltaEn;
 
+    /** Cómo se resolvió (FLY-31); null mientras siga abierta. */
+    private Boolean aFavorDelTransportista;
+
     public Disputa(Viaje viaje, String motivo, String descripcion, String abiertaPorSub) {
         this.viaje = viaje;
         this.motivo = motivo;
@@ -66,5 +70,20 @@ public class Disputa {
         this.abiertaPorSub = abiertaPorSub;
         this.abiertaEn = Instant.now();
         this.estado = EstadoDisputa.ABIERTA;
+    }
+
+    /**
+     * Completa la resolución, una sola vez: los datos de la apertura no cambian y una disputa resuelta no se reabre.
+     * Quién decide qué pasa con el viaje es el viaje (EnDisputa.resolverDisputa); esto solo deja constancia.
+     */
+    void resolver(boolean aFavorDelTransportista, String resolucion, String operadorSub) {
+        if (estado != EstadoDisputa.ABIERTA) {
+            throw new ConflictoException("La disputa ya está resuelta");
+        }
+        this.estado = EstadoDisputa.RESUELTA;
+        this.aFavorDelTransportista = aFavorDelTransportista;
+        this.resolucion = resolucion;
+        this.operadorSub = operadorSub;
+        this.resueltaEn = Instant.now();
     }
 }
