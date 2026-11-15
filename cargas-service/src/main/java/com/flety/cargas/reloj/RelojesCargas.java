@@ -11,8 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.time.Clock;
 
 /**
- * El "Reloj" del diseño para cargas, igual que RelojesTransporte: conforma los viajes a las 48 h (FLY-30).
- * Solo dispara: la regla vive en ConformidadAutomaticaService, que recibe la hora y por eso se prueba sin esperar.
+ * El "Reloj" del diseño para cargas, igual que RelojesTransporte: conforma los viajes a las 48 h (FLY-30) y vence
+ * propuestas (FLY-32). Solo dispara: cada regla vive en su service, que recibe la hora y por eso se prueba sin esperar.
  * En los tests está apagado (flety.relojes.habilitados=false) para que no toque los datos de otro test.
  */
 @Configuration
@@ -23,10 +23,12 @@ public class RelojesCargas {
     private static final Logger log = LoggerFactory.getLogger(RelojesCargas.class);
 
     private final ConformidadAutomaticaService conformidad;
+    private final VencimientosService vencimientos;
     private final Clock reloj = Clock.systemUTC();
 
-    public RelojesCargas(ConformidadAutomaticaService conformidad) {
+    public RelojesCargas(ConformidadAutomaticaService conformidad, VencimientosService vencimientos) {
         this.conformidad = conformidad;
+        this.vencimientos = vencimientos;
     }
 
     /**
@@ -38,5 +40,16 @@ public class RelojesCargas {
     public void conformarVencidas() {
         int conformados = conformidad.conformarVencidas(reloj.instant());
         log.info("Reloj de conformidad: {} viajes conformados por el sistema", conformados);
+    }
+
+    /**
+     * Cada 5 minutos: una propuesta vencida no se puede aceptar (FLY-26 ya lo controla), pero mientras no pase a
+     * VENCIDA el dador la sigue viendo como PENDIENTE. Más seguido que la conformidad porque la ve el dador al elegir.
+     */
+    @Scheduled(fixedDelayString = "${flety.relojes.propuestas:PT5M}",
+            initialDelayString = "${flety.relojes.propuestas-inicio:PT1M}")
+    public void vencerPropuestas() {
+        int vencidas = vencimientos.vencerPropuestas(reloj.instant());
+        log.info("Reloj de propuestas: {} propuestas vencidas", vencidas);
     }
 }
