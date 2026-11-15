@@ -1,2 +1,4 @@
 com.flety.commons.FletyCommonsAutoConfiguration
 com.flety.commons.seguridad.SeguridadAutoConfiguration
+com.flety.commons.openapi.OpenApiAutoConfiguration
+

@@ -14,7 +14,7 @@
 
     <groupId>com.flety</groupId>
     <artifactId>flety-commons</artifactId>
-    <version>0.4.0</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
     <name>flety-commons</name>
     <description>Librería común de Flety: excepciones, manejo de errores, contrato interno y clientes externos</description>
@@ -46,6 +46,12 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-tx</artifactId>
+        </dependency>
+        <!-- Anotaciones de Swagger / OpenAPI para configuración común (FLY-38) -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>2.2.55</version>
         </dependency>
 
         <dependency>
