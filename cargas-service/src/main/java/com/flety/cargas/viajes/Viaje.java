@@ -111,7 +111,7 @@ public class Viaje {
     @Column(nullable = false)
     private TipoEstadoViaje estado;
 
-    /** Los completa la entrega (marcarEntregado); conformadoPor, la conformidad (FLY-30). */
+    /** Los completa la entrega (marcarEntregado); conformadoPor, la conformidad (marcarConformado, FLY-30). */
     private Instant entregadoEn;
 
     private Instant ventanaConformidadHasta;
@@ -215,6 +215,19 @@ public class Viaje {
         this.ventanaConformidadHasta = entregadoEn.plus(VENTANA_CONFORMIDAD);
         cambiarEstado(TipoEstadoViaje.ENTREGADO, actorSub,
                 "Remito " + entrega.numeroRemito() + ", recibió " + entrega.recibioNombre());
+    }
+
+    /**
+     * Lo llama Entregado al conformar, ya con la ventana controlada: es el mismo camino para el dador y para el
+     * Reloj, y solo cambia quién queda registrado. El viaje terminó, así que la carga queda CERRADA en la misma
+     * transacción (como en la cancelación, cambian dos entidades juntas).
+     */
+    void marcarConformado(ConformadoPor por, String actorSub) {
+        this.conformadoPor = por;
+        cambiarEstado(TipoEstadoViaje.CONFORMADO, actorSub, por == ConformadoPor.DADOR
+                ? "Conformó el dador"
+                : "Conformidad automática: pasaron 48 h sin conformidad ni disputa");
+        carga.setEstado(EstadoCarga.CERRADA);
     }
 
     /**
