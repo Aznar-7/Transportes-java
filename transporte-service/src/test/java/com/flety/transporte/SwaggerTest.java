@@ -34,6 +34,20 @@ class SwaggerTest {
                         + ".content['application/problem+json']").exists());
     }
 
+    /**
+     * El requisito global es lo que hace que Swagger UI mande el token en "Try it out": con el esquema solo, el botón
+     * Authorize aparece pero los pedidos salen sin token y dan 401. Lo agrega flety-commons (FLY-38) sin pisar el
+     * título que pone el SwaggerConfig de este servicio.
+     */
+    @Test
+    void todasLasOperacionesExigenElTokenBearer() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.security.length()").value(1))
+                .andExpect(jsonPath("$.security[0].bearer").isArray())
+                .andExpect(jsonPath("$.info.title").value("transporte-service"));
+    }
+
     @Test
     void laInterfazDeSwaggerTambienEsPublica() throws Exception {
         mockMvc.perform(get("/swagger-ui/index.html"))
