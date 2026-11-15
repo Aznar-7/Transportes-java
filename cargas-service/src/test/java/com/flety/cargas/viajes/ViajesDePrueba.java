@@ -11,9 +11,11 @@ import com.flety.cargas.mercado.Ubicacion;
 import com.flety.commons.contrato.TipoCarroceria;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
@@ -109,6 +111,30 @@ public class ViajesDePrueba {
         public void pasarA(Long viajeId, TipoEstadoViaje estado) {
             tx.executeWithoutResult(t -> viajes.findById(viajeId).orElseThrow()
                     .cambiarEstado(estado, SUB_TRANSPORTISTA, null));
+        }
+
+        /**
+         * Viaje ENTREGADO por los hitos de verdad (no con pasarA): así tiene entregadoEn y la ventana de conformidad,
+         * que vence en 48 h. Una unidad propia evita chocar con los viajes de otros tests.
+         */
+        public Long viajeEntregado() {
+            Long id = viajeConfirmado(unidadNueva(), Instant.now().plus(3, ChronoUnit.DAYS)).getId();
+            tx.executeWithoutResult(t -> {
+                Viaje viaje = viajes.findById(id).orElseThrow();
+                viaje.cargar(SUB_TRANSPORTISTA);
+                viaje.iniciarTransito(SUB_TRANSPORTISTA);
+                viaje.registrarEntrega(new DatosEntrega("R-0001-1", "Ana Gómez", "30111222"), SUB_TRANSPORTISTA);
+            });
+            return id;
+        }
+
+        /**
+         * Simula que pasaron las 48 h: corre la ventana al pasado. ventanaConformidadHasta no tiene setter (la fija la
+         * entrega), así que se cambia por reflexión sobre el viaje managed y Hibernate lo guarda al terminar.
+         */
+        public void vencerVentana(Long viajeId, Duration haceCuanto) {
+            tx.executeWithoutResult(t -> ReflectionTestUtils.setField(viajes.findById(viajeId).orElseThrow(),
+                    "ventanaConformidadHasta", Instant.now().minus(haceCuanto)));
         }
     }
 

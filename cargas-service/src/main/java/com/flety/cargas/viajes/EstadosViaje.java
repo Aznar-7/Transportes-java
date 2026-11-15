@@ -22,6 +22,7 @@ final class EstadosViaje {
         registrar(new EnTransito());
         registrar(new Entregado());
         registrar(new Cancelado());
+        registrar(new Conformado());
         for (TipoEstadoViaje tipo : TipoEstadoViaje.values()) {
             ESTADOS.putIfAbsent(tipo, new EstadoSinAcciones(tipo));
         }

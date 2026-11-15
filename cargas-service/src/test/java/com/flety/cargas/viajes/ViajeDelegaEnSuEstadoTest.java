@@ -80,10 +80,10 @@ class ViajeDelegaEnSuEstadoTest {
         assertThat(EstadosViaje.de(tipo).tipo()).isEqualTo(tipo);
     }
 
-    /** Los estados que completan FLY-30 y FLY-31 todavía no permiten ninguna acción. */
+    /** Los estados que completa FLY-31 todavía no permiten ninguna acción. */
     @ParameterizedTest
     @EnumSource(value = TipoEstadoViaje.class,
-            names = {"CONFORMADO", "EN_DISPUTA", "CERRADO_CON_DISPUTA"})
+            names = {"EN_DISPUTA", "CERRADO_CON_DISPUTA"})
     void losEstadosQueFaltanNoPermitenNada(TipoEstadoViaje tipo) {
         EstadoViaje estado = EstadosViaje.de(tipo);
         Viaje viaje = EstadosDelViajeTest.viajeEnMemoria();
