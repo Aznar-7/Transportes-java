@@ -25,16 +25,40 @@ final class Entregado implements EstadoViaje {
      */
     @Override
     public void conformar(Viaje viaje, ConformadoPor por, String actorSub) {
-        Instant hasta = viaje.getVentanaConformidadHasta();
-        boolean ventanaAbierta = !Instant.now().isAfter(hasta);
-        if (por == ConformadoPor.DADOR && !ventanaAbierta) {
-            throw new ConflictoException("La ventana de conformidad venció el " + hasta
-                    + ": la conformidad ya la da el sistema");
+        boolean abierta = ventanaAbierta(viaje);
+        if (por == ConformadoPor.DADOR && !abierta) {
+            throw ventanaVencida(viaje);
         }
-        if (por == ConformadoPor.SISTEMA && ventanaAbierta) {
-            throw new ConflictoException("La ventana de conformidad sigue abierta hasta " + hasta
-                    + ": todavía puede conformar o disputar el dador");
+        if (por == ConformadoPor.SISTEMA && abierta) {
+            throw new ConflictoException("La ventana de conformidad sigue abierta hasta "
+                    + viaje.getVentanaConformidadHasta() + ": todavía puede conformar o disputar el dador");
+        }
+        if (por == ConformadoPor.OPERADOR) {
+            // El operador solo conforma al resolver una disputa (EnDisputa), nunca directo desde ENTREGADO.
+            throw new ConflictoException("Un operador conforma solo al resolver una disputa");
         }
         viaje.marcarConformado(por, actorSub);
+    }
+
+    /**
+     * El dador reclama dentro de la ventana, con la misma regla de tiempo que la conformidad: pasadas las 48 h ya no
+     * puede ni conformar ni disputar, porque la conformidad la da el sistema.
+     */
+    @Override
+    public void disputar(Viaje viaje, String motivo, String descripcion, String actorSub) {
+        if (!ventanaAbierta(viaje)) {
+            throw ventanaVencida(viaje);
+        }
+        viaje.marcarEnDisputa(motivo, actorSub);
+    }
+
+    /** La ventana incluye el instante exacto en que vence. */
+    private static boolean ventanaAbierta(Viaje viaje) {
+        return !Instant.now().isAfter(viaje.getVentanaConformidadHasta());
+    }
+
+    private static ConflictoException ventanaVencida(Viaje viaje) {
+        return new ConflictoException("La ventana de conformidad venció el " + viaje.getVentanaConformidadHasta()
+                + ": la conformidad ya la da el sistema");
     }
 }

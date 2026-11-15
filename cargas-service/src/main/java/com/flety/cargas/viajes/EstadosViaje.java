@@ -10,7 +10,8 @@ import java.util.Map;
  * Como los estados no tienen datos propios, hay una sola instancia de cada uno, compartida por todos los viajes.
  * <p>
  * Cada estado se registra con su propio tipo(): no puede quedar la clase de un estado anotada bajo otro.
- * Los tipos que todavía no tienen clase quedan con EstadoSinAcciones, así ningún valor del enum queda sin estado.
+ * Si un valor del enum se queda sin su clase (por ejemplo, al agregar un estado nuevo), la clase falla al cargarse:
+ * es mejor que el servicio no arranque a que un viaje caiga en un estado sin reglas.
  */
 final class EstadosViaje {
 
@@ -23,8 +24,12 @@ final class EstadosViaje {
         registrar(new Entregado());
         registrar(new Cancelado());
         registrar(new Conformado());
+        registrar(new EnDisputa());
+        registrar(new CerradoConDisputa());
         for (TipoEstadoViaje tipo : TipoEstadoViaje.values()) {
-            ESTADOS.putIfAbsent(tipo, new EstadoSinAcciones(tipo));
+            if (!ESTADOS.containsKey(tipo)) {
+                throw new IllegalStateException("Falta la clase de estado para " + tipo);
+            }
         }
     }
 
