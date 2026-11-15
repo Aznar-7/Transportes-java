@@ -2,6 +2,7 @@ package com.flety.cargas.viajes;
 
 import com.flety.cargas.mercado.Carga;
 import com.flety.cargas.mercado.Ubicacion;
+import com.flety.cargas.viajes.dto.DisputaDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO.CancelacionDTO;
 import com.flety.cargas.viajes.dto.ViajeDetalleDTO.ContactoDTO;
@@ -29,10 +30,12 @@ import java.util.List;
 public class ConsultaViajesService {
 
     private final ViajeRepository viajes;
+    private final DisputaRepository disputas;
     private final UsuarioActual usuarioActual;
 
-    public ConsultaViajesService(ViajeRepository viajes, UsuarioActual usuarioActual) {
+    public ConsultaViajesService(ViajeRepository viajes, DisputaRepository disputas, UsuarioActual usuarioActual) {
         this.viajes = viajes;
+        this.disputas = disputas;
         this.usuarioActual = usuarioActual;
     }
 
@@ -77,6 +80,8 @@ public class ConsultaViajesService {
                 vigente ? contactos(viaje) : null,
                 viaje.getEntregadoEn(), viaje.getVentanaConformidadHasta(), viaje.getConformadoPor(),
                 cancelacion(viaje),
+                // La disputa (FLY-31) la ven las dos partes: el dador que la abrió y el transportista reclamado.
+                disputas.findFirstByViajeIdOrderByAbiertaEnDesc(viaje.getId()).map(DisputaDTO::desde).orElse(null),
                 viaje.getEventos().stream().map(ConsultaViajesService::evento).toList());
     }
 
