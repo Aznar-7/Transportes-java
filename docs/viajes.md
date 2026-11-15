@@ -129,4 +129,4 @@ mvn -f cargas-service/pom.xml test
 | `VencerPropuestasTest`, `VencerCargasTest`, `LoQuePasePrimeroTest` | Los vencimientos del Reloj |
 | `ViajeTest`, `ViajeControllerTest`, `ViajeDeTercerosTest` | Entidades, línea de tiempo append-only y consulta con control de dueño |
 
-El trigger de `evento_viaje` y el índice parcial son de Postgres y no corren en los tests (H2): se prueban contra el compose ([infra/README.md](../infra/README.md)).
+El trigger de `evento_viaje` y el índice parcial son de Postgres y no corren en los tests (H2): se prueban contra el compose ([despliegue.md](despliegue.md)).
