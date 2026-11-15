@@ -29,4 +29,19 @@ No lleva cuerpo.
 | El dador, por la API | `DADOR` | su `sub` | mientras la ventana está abierta (hasta `ventanaConformidadHasta`, inclusive) |
 | El Reloj | `SISTEMA` | `SISTEMA` | recién cuando la ventana venció |
 
+## La conformidad automática
+
+`RelojesCargas` (paquete `reloj`) es el Reloj de cargas, igual que `RelojesTransporte`. Solo dispara: cada 15 minutos llama a `ConformidadAutomaticaService.conformarVencidas(ahora)`, que busca los viajes ENTREGADOS con la ventana vencida y los conforma como `SISTEMA`.
+
+| Propiedad | Por defecto | Qué hace |
+|---|---|---|
+| `flety.relojes.habilitados` | `true` | Prende o apaga los relojes. En los tests está en `false` |
+| `flety.relojes.conformidad` | `PT15M` | Cada cuánto corre: un viaje queda a lo sumo 15 minutos de más en ENTREGADO |
+| `flety.relojes.conformidad-inicio` | `PT1M` | Cuánto espera la primera vuelta después del arranque |
+
+- **Un viaje por transacción.** Si uno falla, los demás se conforman igual, y nunca se bloquean todos juntos.
+- **Si el dador actúa a la vez,** el `@Version` del viaje lo detecta (o el viaje ya no está ENTREGADO): el Reloj lo saltea, porque ya no le toca, y lo vuelve a mirar en la vuelta siguiente.
+- **Un viaje EN_DISPUTA no entra:** el dador ya actuó dentro de la ventana (FLY-31).
+- **La regla recibe la hora,** así los tests la prueban con una ventana vencida sin esperar a que el Reloj dispare.
+
 Fuera de su lado, cada uno recibe 409 (`ConflictoException`): el pedido está bien, lo que choca es el momento. Como no hay dos caminos, no puede pasar que un viaje quede distinto según quién lo conformó: el estado, la carga CERRADA y el evento salen siempre del mismo `Viaje.marcarConformado`.

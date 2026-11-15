@@ -19,3 +19,9 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: http://localhost:1/sin-keycloak-en-tests
+
+# Los relojes se prueban llamando a cada service con una hora, no esperando a que disparen: prendidos, la conformidad
+# automática podría conformar los viajes de ventana vencida que deja otro test.
+flety:
+  relojes:
+    habilitados: false
