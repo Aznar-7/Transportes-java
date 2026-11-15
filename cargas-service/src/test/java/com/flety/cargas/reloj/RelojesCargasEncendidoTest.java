@@ -19,7 +19,11 @@ class RelojesCargasEncendidoTest {
     RelojesCargas relojes;
 
     @Test
-    void laTareaArrancaYCorreSinErrores() {
-        assertThatCode(relojes::conformarVencidas).doesNotThrowAnyException();
+    void lasTareasArrancanYCorrenSinErrores() {
+        assertThatCode(() -> {
+            relojes.conformarVencidas();
+            relojes.vencerPropuestas();
+            relojes.vencerCargas();
+        }).doesNotThrowAnyException();
     }
 }
