@@ -2,6 +2,7 @@ package com.flety.cargas.viajes;
 
 import org.springframework.data.repository.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -16,4 +17,7 @@ public interface DisputaRepository extends Repository<Disputa, Long> {
 
     /** La disputa más reciente del viaje, para mostrarla en su detalle (un viaje tiene a lo sumo una). */
     Optional<Disputa> findFirstByViajeIdOrderByAbiertaEnDesc(Long viajeId);
+
+    /** La bandeja del operador: las de ese estado, de la más vieja a la más nueva (se atienden en orden de llegada). */
+    List<Disputa> findByEstadoOrderByAbiertaEnAsc(EstadoDisputa estado);
 }
