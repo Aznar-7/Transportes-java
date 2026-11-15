@@ -109,4 +109,4 @@ mvn -f cargas-service/pom.xml test
 | FLY-43 | `BusquedaConfig` usa `CalculadorDesvioFake`, que da siempre el mismo desvío: la caída a línea recta se prueba recién con la estrategia real |
 | FLY-35 | `cargas-service` todavía no reenvía el token a `transporte-service` |
 | Endpoints `/internal` de transporte | Todavía no existen, y tienen que completar `transportistaSub` |
-| FLY-32 | Una propuesta guarda su `vencimiento`, pero todavía no hay reloj que pase a `VENCIDA` las propuestas y las cargas |
+| FLY-32 | Hecho: el Reloj de cargas vence las propuestas (RN-16) y las cargas sin viaje (RN-17); ver [viajes/relojes.md](viajes/relojes.md) |

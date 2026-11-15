@@ -12,7 +12,8 @@ import java.time.Clock;
 
 /**
  * El "Reloj" del diseño para cargas, igual que RelojesTransporte: conforma los viajes a las 48 h (FLY-30) y vence
- * propuestas (FLY-32). Solo dispara: cada regla vive en su service, que recibe la hora y por eso se prueba sin esperar.
+ * propuestas y cargas (FLY-32). Solo dispara: cada regla vive en su service, que recibe la hora y por eso se prueba
+ * sin esperar.
  * En los tests está apagado (flety.relojes.habilitados=false) para que no toque los datos de otro test.
  */
 @Configuration
@@ -51,5 +52,18 @@ public class RelojesCargas {
     public void vencerPropuestas() {
         int vencidas = vencimientos.vencerPropuestas(reloj.instant());
         log.info("Reloj de propuestas: {} propuestas vencidas", vencidas);
+    }
+
+    /**
+     * Cada 15 minutos: una carga sin viaje con la ventana cerrada pasa a VENCIDA (RN-17). Primero vence las propuestas
+     * con la misma hora, así no quedan PENDIENTES de una carga que ya venció.
+     */
+    @Scheduled(fixedDelayString = "${flety.relojes.cargas:PT15M}",
+            initialDelayString = "${flety.relojes.cargas-inicio:PT1M}")
+    public void vencerCargas() {
+        var ahora = reloj.instant();
+        vencimientos.vencerPropuestas(ahora);
+        int vencidas = vencimientos.vencerCargas(ahora);
+        log.info("Reloj de cargas: {} cargas vencidas", vencidas);
     }
 }

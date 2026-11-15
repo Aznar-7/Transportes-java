@@ -23,6 +23,7 @@ class RelojesCargasEncendidoTest {
         assertThatCode(() -> {
             relojes.conformarVencidas();
             relojes.vencerPropuestas();
+            relojes.vencerCargas();
         }).doesNotThrowAnyException();
     }
 }
