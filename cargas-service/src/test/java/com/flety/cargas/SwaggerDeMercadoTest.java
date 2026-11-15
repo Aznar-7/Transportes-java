@@ -91,6 +91,19 @@ class SwaggerDeMercadoTest {
         assertThat(bearer.path("bearerFormat").asString()).isEqualTo("JWT");
     }
 
+    /**
+     * El requisito global es lo que hace que Swagger UI mande el token en "Try it out". Con el esquema solo, el botón
+     * Authorize aparece pero los pedidos salen sin token y dan 401. El título es del SwaggerConfig del servicio: la
+     * seguridad de commons se suma sin pisarlo.
+     */
+    @Test
+    void todasLasOperacionesExigenElTokenBearerYSeMantieneElTitulo() throws Exception {
+        JsonNode docs = apiDocs();
+
+        assertThat(docs.path("security").toString()).isEqualTo("[{\"bearer\":[]}]");
+        assertThat(docs.path("info").path("title").asString()).isEqualTo("cargas-service");
+    }
+
     private JsonNode apiDocs() throws Exception {
         String json = mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())

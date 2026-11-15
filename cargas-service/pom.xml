@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <flety-commons.version>1.0.0</flety-commons.version>
+        <flety-commons.version>1.0.1</flety-commons.version>
         <springdoc.version>3.2.0</springdoc.version>
     </properties>
 
