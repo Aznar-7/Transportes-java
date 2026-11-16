@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "flety-collection-e2e-demo",
     "name": "Flety - Colección de Demo de Punta a Punta",
-    "description": "# Flety - Colección de Demo de Punta a Punta (E2E)\n\nColección automatizada de Postman para la demostración de punta a punta de Flety (FLY-39).\nPermite ejecutar el ciclo de vida completo de la solución sin necesidad de copiar y pegar tokens manualmente.\n\n## Requisitos previos\n1. Levantar la solución completa con Docker Compose:\n   ```bash\n   docker compose down -v\n   docker compose up -d\n   ```\n2. Esperar ~15 segundos a que Keycloak termine de inicializar el realm.\n3. Importar el entorno `flety.postman_environment.json` y seleccionarlo como ambiente activo (**Flety Local**).\n\n## Estructura de carpetas\n- **00 · Autenticación:** Solicita y almacena dinámicamente en variables de entorno los tokens JWT para los tres roles del sistema (Transportista, Dador y Operador).\n- **01 · Alta del transportista:** Alta de organización (P1), registro de unidad (P2a), carga de pólizas y RTO (P2b-d) y consulta de habilitación previa (P3).\n- **02 · Verificación:** Dictamen del operador (P4a), aprobación de documentación obligatoria (P4b-d) y confirmación de habilitación de la unidad (P5, RN-04).\n- **03 · Retornos:** Publicación de retorno con ruta calculada (P6), consulta y listado.\n- **04 · Alta del dador y cargas:** Registro del dador (P7), publicación de carga compatible e incompatible (P8a-b) y reserva de contacto (P10, RN-13).\n- **05 · Búsqueda de cargas de paso:** Algoritmo de matching por corredor geográfico, desvío y precio por km (P9, RN-01, RN-02).\n- **06 · Propuestas:** Postulación con contraoferta única (P11, RN-03) y retiro de propuesta (P20).\n- **07 · Elección del dador:** Consulta y aceptación de propuesta con generación del viaje confirmado (P12, RN-14, RN-15).\n- **08 · Ejecución del viaje:** Línea de tiempo y liberación de contactos (P13), avance de hitos CARGADO, EN_TRANSITO y ENTREGADO con remito (P14, RN-T2, RN-18).\n- **09 · Cierre:** Conformidad expresa de la entrega por el dador (P15) y cierre definitivo.\n- **10 · Cancelación y disputas:** Mediación de disputas (P16 a favor, P17 en contra, RN-19) y cancelación anticipada de viaje (P18 transportista, P19 dador, RN-10).\n- **11 · Seguridad (S1-S7):** Control de autenticación 401, autorización por rol en Gateway 403, validación de dueño en servicio 403 (RN-T1) y aislamiento interno 404.\n- **12 · Reglas de negocio (N1-N18):** Validaciones de formato (400), unicidad y estados (409) y reglas de negocio RN-01 a RN-19 (422).\n\n## Usuarios y roles de prueba (Keycloak)\n| Usuario | Clave | Rol | Propósito |\n| :--- | :--- | :--- | :--- |\n| `transportista1` | `transportista1` | `TRANSPORTISTA` | Flujo principal de transporte y viajes |\n| `transportista2` | `transportista2` | `TRANSPORTISTA` | Negativos de seguridad (RN-T1) |\n| `dador1` | `dador1` | `DADOR` | Publicación de cargas, propuestas y conformidad |\n| `operador1` | `operador1` | `OPERADOR` | Verificación de documentación y resolución de disputas |\n\n## Reinicio para nueva corrida\nPara volver a ejecutar la demo desde cero:\n```bash\ndocker compose down -v && docker compose up -d\n```\n",
+    "description": "# Flety - Colección de Demo de Punta a Punta (E2E)\n\nColección automatizada de Postman para la demostración de punta a punta de Flety (FLY-39).\nPermite ejecutar el ciclo de vida completo de la solución sin necesidad de copiar y pegar tokens manualmente.\n\n## Requisitos previos\n1. Levantar la solución completa con Docker Compose:\n   ```bash\n   docker compose down -v\n   docker compose up -d\n   ```\n2. Esperar ~15 segundos a que Keycloak termine de inicializar el realm.\n3. Importar el entorno `flety.postman_environment.json` y seleccionarlo como ambiente activo (**Flety Local**).\n\n## Estructura de carpetas\n- **00 · Autenticación:** Solicita y almacena dinámicamente en variables de entorno los tokens JWT para los tres roles del sistema (Transportista, Dador y Operador).\n- **01 · Alta del transportista:** Alta de organización (P1), registro de unidad (P2a), carga de pólizas y RTO (P2b-d) y consulta de habilitación previa (P3).\n- **02 · Verificación:** Dictamen del operador (P4a), aprobación de documentación obligatoria (P4b-d) y confirmación de habilitación de la unidad (P5, RN-04).\n- **03 · Retornos:** Publicación de retorno con ruta calculada (P6), consulta y listado.\n- **04 · Alta del dador y cargas:** Registro del dador (P7), publicación de carga compatible e incompatible (P8a-b) y reserva de contacto (P10, RN-13).\n- **05 · Búsqueda de cargas de paso:** Algoritmo de matching por corredor geográfico, desvío y precio por km (P9, RN-01, RN-02).\n- **06 · Propuestas:** Postulación con contraoferta única (P11, RN-03) y retiro de propuesta (P20).\n- **07 · Elección del dador:** Consulta y aceptación de propuesta con generación del viaje confirmado (P12, RN-14, RN-15).\n- **08 · Ejecución del viaje:** Línea de tiempo y liberación de contactos (P13), avance de hitos CARGADO, EN_TRANSITO y ENTREGADO con remito (P14, RN-T2, RN-18).\n- **09 · Cierre:** Conformidad expresa de la entrega por el dador (P15) y cierre definitivo.\n- **10 · Cancelación y disputas:** Mediación de disputas (P16 a favor, P17 en contra, RN-19) y cancelación anticipada de viaje (P18 transportista, P19 dador, RN-10).\n- **11 · Seguridad (S1-S7):** Control de autenticación 401, autorización por rol en Gateway 403, validación de dueño en servicio 403 (RN-T1) y aislamiento interno 404.\n- **12 · Reglas de negocio (N1-N18):** Validaciones de formato (400), unicidad y estados (409) y reglas de negocio RN-01 a RN-19 (422).\n- **13 · Integraciones y fallos:** Contingencias de APIs externas (I1-I4) y escenarios de falla cerrada con transporte apagado (I5-I7).\n\n## Usuarios y roles de prueba (Keycloak)\n| Usuario | Clave | Rol | Propósito |\n| :--- | :--- | :--- | :--- |\n| `transportista1` | `transportista1` | `TRANSPORTISTA` | Flujo principal de transporte y viajes |\n| `transportista2` | `transportista2` | `TRANSPORTISTA` | Negativos de seguridad (RN-T1) |\n| `dador1` | `dador1` | `DADOR` | Publicación de cargas, propuestas y conformidad |\n| `operador1` | `operador1` | `OPERADOR` | Verificación de documentación y resolución de disputas |\n\n## Reinicio para nueva corrida\nPara volver a ejecutar la demo desde cero:\n```bash\ndocker compose down -v && docker compose up -d\n```\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -56,31 +56,6 @@
           },
           "response": [],
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Limpiar variables de ejecuciones anteriores",
-                  "pm.environment.set('transportistaId', '');",
-                  "pm.environment.set('unidadId', '');",
-                  "pm.environment.set('dominioUnidad', '');",
-                  "pm.environment.set('dominioUnidad2', '');",
-                  "pm.environment.set('cuitTransportista', '');",
-                  "pm.environment.set('cuitTransportista2', '');",
-                  "pm.environment.set('cuitDador', '');",
-                  "pm.environment.set('documentoRcId', '');",
-                  "pm.environment.set('documentoCargaId', '');",
-                  "pm.environment.set('documentoRtoId', '');",
-                  "pm.environment.set('retornoId', '');",
-                  "pm.environment.set('dadorId', '');",
-                  "pm.environment.set('cargaId', '');",
-                  "pm.environment.set('cargaIncompatibleId', '');",
-                  "pm.environment.set('propuestaId', '');",
-                  "pm.environment.set('viajeId', '');"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -5435,6 +5410,661 @@
         }
       ],
       "description": "### 12 · Negativos de Reglas de Negocio (N1 - N18)\nValidación de formato, unicidad, estados y reglas de negocio RN-01 a RN-19.\n\n#### Escenarios Verificados:\n* **N1 (400):** CUIT con dígito verificador inválido.\n* **N2a / N2b (409):** Segundo alta del mismo transportista / Patente repetida.\n* **N3 (422 RN-07, RN-08):** Carga declarada peligrosa o sobredimensionada.\n* **N4 (422 RN-04):** Propuesta con unidad sin verificar o sin documentos aprobados.\n* **N5 (422 RN-01):** Propuesta con carrocería incompatible.\n* **N6 (409):** Segunda propuesta del mismo transportista a la misma carga.\n* **N7 (422 RN-06):** Valor declarado mayor a póliza sin aceptar riesgo comercial.\n* **N8 (409 RN-14):** Aceptar propuesta para carga ya asignada.\n* **N9 (409 RN-15):** Aceptar propuesta con superposición horaria en la misma unidad.\n* **N10 (409 RN-T2):** Saltear hito CARGADO al avanzar a EN_TRANSITO.\n* **N11 (400 RN-18):** Registrar entrega sin comprobante de remito.\n* **N12 (409 RN-18):** Conformar viaje no entregado.\n* **N13 / N14 (409 RN-19):** Disputar viaje ya conformado / Reabrir disputa resuelta.\n* **N15 (409 RN-10):** Cancelar viaje que ya se encuentra cargado.\n* **N16 / N17 / N18 (409):** Retirar propuesta aceptada, auditar documento no pendiente, cancelar carga con viaje activo."
+    },
+    {
+      "name": "13 · Integraciones y fallos",
+      "item": [
+        {
+          "name": "I1 Publicar retorno enviando coordenadas explícitas (Georef)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transporte/retornos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "transporte",
+                "retornos"
+              ]
+            },
+            "description": "I1: Publicación de retorno con coordenadas geográficas explícitas. Se usan directamente sin consultar a Georef (201 Created).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadId\": \"{{unidadId}}\",\n  \"origen\": {\n    \"provincia\": \"Córdoba\",\n    \"localidad\": \"Córdoba\",\n    \"lat\": -31.4201,\n    \"lng\": -64.1888\n  },\n  \"destino\": {\n    \"provincia\": \"Santa Fe\",\n    \"localidad\": \"Rosario\",\n    \"lat\": -32.9468,\n    \"lng\": -60.6393\n  },\n  \"salidaDesde\": \"{{salidaDesde}}\",\n  \"salidaHasta\": \"{{salidaHasta}}\",\n  \"desvioMaximoKm\": 50\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let ahora = new Date();\npm.environment.set(\"vigenciaFutura\", new Date(ahora.getTime() + 365 * 24 * 3600 * 1000).toISOString());\npm.environment.set(\"salidaDesde\", new Date(ahora.getTime() + 2 * 3600 * 1000).toISOString());\npm.environment.set(\"salidaHasta\", new Date(ahora.getTime() + 24 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaDesde\", new Date(ahora.getTime() + 3 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaHasta\", new Date(ahora.getTime() + 6 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaDesde\", new Date(ahora.getTime() + 7 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaHasta\", new Date(ahora.getTime() + 18 * 3600 * 1000).toISOString());\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function() { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    let res = pm.response.json();",
+                  "    pm.test('Retorno creado usando coordenadas enviadas sin consultar Georef', function() {",
+                  "        pm.expect(res.id).to.be.a('number');",
+                  "        pm.expect(res.estado).to.eql('PUBLICADO');",
+                  "    });",
+                  "    pm.environment.set('retornoI1Id', res.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I2 Publicar retorno con localidad inexistente sin coordenadas (503 Georef)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transporte/retornos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "transporte",
+                "retornos"
+              ]
+            },
+            "description": "I2: Publicación con localidad inexistente y sin coordenadas. Georef no responde o desconoce el punto: el sistema responde 503 Service Unavailable sin inventar coordenadas.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadId\": \"{{unidadId}}\",\n  \"origen\": {\n    \"provincia\": \"Córdoba\",\n    \"localidad\": \"LocalidadInexistenteFletyX99\"\n  },\n  \"destino\": {\n    \"provincia\": \"Santa Fe\",\n    \"localidad\": \"Rosario\",\n    \"lat\": -32.9468,\n    \"lng\": -60.6393\n  },\n  \"salidaDesde\": \"{{salidaDesde}}\",\n  \"salidaHasta\": \"{{salidaHasta}}\",\n  \"desvioMaximoKm\": 50\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let ahora = new Date();\npm.environment.set(\"vigenciaFutura\", new Date(ahora.getTime() + 365 * 24 * 3600 * 1000).toISOString());\npm.environment.set(\"salidaDesde\", new Date(ahora.getTime() + 2 * 3600 * 1000).toISOString());\npm.environment.set(\"salidaHasta\", new Date(ahora.getTime() + 24 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaDesde\", new Date(ahora.getTime() + 3 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaHasta\", new Date(ahora.getTime() + 6 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaDesde\", new Date(ahora.getTime() + 7 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaHasta\", new Date(ahora.getTime() + 18 * 3600 * 1000).toISOString());\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 503 Service Unavailable', function() { pm.response.to.have.status(503); });",
+                  "if (pm.response.code === 503) {",
+                  "    let res = pm.response.json();",
+                  "    pm.test('Mensaje explicita que debe enviar coordenadas', function() {",
+                  "        let msg = res.message || res.error || JSON.stringify(res);",
+                  "        pm.expect(msg).to.include('No pudimos ubicar la localidad');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I3 Publicar retorno en contingencia de ruteo (201 rutaAproximada)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transporte/retornos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "transporte",
+                "retornos"
+              ]
+            },
+            "description": "I3: Ante caída o falta de servicio de ruteo externo, el retorno se guarda en línea recta con rutaAproximada = true.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadId\": \"{{unidadId}}\",\n  \"origen\": {\n    \"provincia\": \"Córdoba\",\n    \"localidad\": \"Río Cuarto\",\n    \"lat\": -33.1232,\n    \"lng\": -64.3493\n  },\n  \"destino\": {\n    \"provincia\": \"Córdoba\",\n    \"localidad\": \"Villa María\",\n    \"lat\": -32.4075,\n    \"lng\": -63.2402\n  },\n  \"salidaDesde\": \"{{salidaDesde}}\",\n  \"salidaHasta\": \"{{salidaHasta}}\",\n  \"desvioMaximoKm\": 40\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let ahora = new Date();\npm.environment.set(\"vigenciaFutura\", new Date(ahora.getTime() + 365 * 24 * 3600 * 1000).toISOString());\npm.environment.set(\"salidaDesde\", new Date(ahora.getTime() + 2 * 3600 * 1000).toISOString());\npm.environment.set(\"salidaHasta\", new Date(ahora.getTime() + 24 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaDesde\", new Date(ahora.getTime() + 3 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaHasta\", new Date(ahora.getTime() + 6 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaDesde\", new Date(ahora.getTime() + 7 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaHasta\", new Date(ahora.getTime() + 18 * 3600 * 1000).toISOString());\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function() { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    let res = pm.response.json();",
+                  "    pm.test('Retorno creado en contingencia con ruta aproximada', function() {",
+                  "        pm.expect(res.id).to.be.a('number');",
+                  "        pm.expect(res.rutaAproximada).to.be.true;",
+                  "    });",
+                  "    pm.environment.set('retornoI3Id', res.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I4 Búsqueda de cargas de paso en modo aproximado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargas/de-paso?retornoId={{retornoI3Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargas",
+                "de-paso"
+              ],
+              "query": [
+                {
+                  "key": "retornoId",
+                  "value": "{{retornoI3Id}}"
+                }
+              ]
+            },
+            "description": "I4: Búsqueda sobre retorno con ruta aproximada: ensancha corredor geográfico y calcula desvíos sin descartar oportunidades.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function() { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "    let res = pm.response.json();",
+                  "    pm.test('Resultados devuelven array válido', function() {",
+                  "        pm.expect(res).to.be.an('array');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I5-I7 Setup Transportista publica retorno para prueba de caída",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/transporte/retornos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "transporte",
+                "retornos"
+              ]
+            },
+            "description": "Setup: Publica retorno en ventana no superpuesta (+72h) para los escenarios de caída",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadId\": \"{{unidadId}}\",\n  \"origen\": {\n    \"provincia\": \"Córdoba\",\n    \"localidad\": \"Córdoba\",\n    \"lat\": -31.4201,\n    \"lng\": -64.1888\n  },\n  \"destino\": {\n    \"provincia\": \"Santa Fe\",\n    \"localidad\": \"Rosario\",\n    \"lat\": -32.9468,\n    \"lng\": -60.6393\n  },\n  \"salidaDesde\": \"{{salidaCaidaDesde}}\",\n  \"salidaHasta\": \"{{salidaCaidaHasta}}\",\n  \"desvioMaximoKm\": 50.0\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let ahora = new Date();\npm.environment.set(\"salidaCaidaDesde\", new Date(ahora.getTime() + 72 * 3600 * 1000).toISOString());\npm.environment.set(\"salidaCaidaHasta\", new Date(ahora.getTime() + 96 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaCaidaDesde\", new Date(ahora.getTime() + 73 * 3600 * 1000).toISOString());\npm.environment.set(\"cargaCaidaHasta\", new Date(ahora.getTime() + 76 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaCaidaDesde\", new Date(ahora.getTime() + 77 * 3600 * 1000).toISOString());\npm.environment.set(\"descargaCaidaHasta\", new Date(ahora.getTime() + 90 * 3600 * 1000).toISOString());\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function() { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    let res = pm.response.json();",
+                  "    pm.environment.set('retornoCaidaId', res.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I5-I7 Setup Dador publica carga para prueba de caída",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargas"
+              ]
+            },
+            "description": "Setup: Prepara carga para los escenarios de caída de transporte-service",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenDador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origen\": {\n    \"provincia\": \"Córdoba\",\n    \"localidad\": \"Villa María\",\n    \"lat\": -32.4075,\n    \"lng\": -63.2402,\n    \"direccion\": \"Ruta 9 km 550\"\n  },\n  \"destino\": {\n    \"provincia\": \"Santa Fe\",\n    \"localidad\": \"Rosario\",\n    \"lat\": -32.9468,\n    \"lng\": -60.6393,\n    \"direccion\": \"Av. Circunvalación 2000\"\n  },\n  \"cargaDesde\": \"{{cargaCaidaDesde}}\",\n  \"cargaHasta\": \"{{cargaCaidaHasta}}\",\n  \"descargaDesde\": \"{{descargaCaidaDesde}}\",\n  \"descargaHasta\": \"{{descargaCaidaHasta}}\",\n  \"rubro\": \"Autopartes\",\n  \"pesoToneladas\": 10.0,\n  \"volumenM3\": 25.0,\n  \"carroceriasAceptadas\": [\n    \"SIDER\"\n  ],\n  \"precioOfrecido\": 420000.0,\n  \"valorDeclarado\": 5000000.0,\n  \"declaraNoPeligrosa\": true,\n  \"declaraNoSobredimensionada\": true\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function() { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    let res = pm.response.json();",
+                  "    pm.environment.set('cargaCaidaId', res.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I5-I7 Setup Transportista postula propuesta previa a caída",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargas/{{cargaCaidaId}}/propuestas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargas",
+                "{{cargaCaidaId}}",
+                "propuestas"
+              ]
+            },
+            "description": "Setup: Deja una propuesta en PENDIENTE antes de detener el servicio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadId\": \"{{unidadId}}\",\n  \"retornoId\": \"{{retornoCaidaId}}\",\n  \"tipo\": \"CONTRAOFERTA\",\n  \"precio\": 410000.0,\n  \"mensaje\": \"Disponible para carga de paso\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function() { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    let res = pm.response.json();",
+                  "    pm.environment.set('propuestaCaidaId', res.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I5-I7 Setup Dador publica carga limpia para fallo en propuesta (I6)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargas"
+              ]
+            },
+            "description": "Setup: Prepara una carga sin propuestas para demostrar fallo 503 cerrado al crear propuesta (I6)",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenDador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origen\": {\n    \"provincia\": \"Córdoba\",\n    \"localidad\": \"Villa María\",\n    \"lat\": -32.4075,\n    \"lng\": -63.2402,\n    \"direccion\": \"Ruta 9 km 550\"\n  },\n  \"destino\": {\n    \"provincia\": \"Santa Fe\",\n    \"localidad\": \"Rosario\",\n    \"lat\": -32.9468,\n    \"lng\": -60.6393,\n    \"direccion\": \"Av. Circunvalación 2000\"\n  },\n  \"cargaDesde\": \"{{cargaCaidaDesde}}\",\n  \"cargaHasta\": \"{{cargaCaidaHasta}}\",\n  \"descargaDesde\": \"{{descargaCaidaDesde}}\",\n  \"descargaHasta\": \"{{descargaCaidaHasta}}\",\n  \"rubro\": \"Autopartes\",\n  \"pesoToneladas\": 8.0,\n  \"volumenM3\": 20.0,\n  \"carroceriasAceptadas\": [\n    \"SIDER\"\n  ],\n  \"precioOfrecido\": 390000.0,\n  \"valorDeclarado\": 4500000.0,\n  \"declaraNoPeligrosa\": true,\n  \"declaraNoSobredimensionada\": true\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function() { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    let res = pm.response.json();",
+                  "    pm.environment.set('cargaI6Id', res.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I5 Buscar cargas de paso con transporte-service detenido (503)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargas/de-paso?retornoId={{retornoCaidaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargas",
+                "de-paso"
+              ],
+              "query": [
+                {
+                  "key": "retornoId",
+                  "value": "{{retornoCaidaId}}"
+                }
+              ]
+            },
+            "description": "I5: [Requiere: docker compose stop transporte-service] Con transporte-service detenido, la búsqueda responde 503 sin inventar datos.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 503 Service Unavailable (falla cerrada)', function() {",
+                  "    pm.response.to.have.status(503);",
+                  "});",
+                  "if (pm.response.code === 503) {",
+                  "    let res = pm.response.json();",
+                  "    pm.test('Mensaje indica indisponibilidad de transporte-service', function() {",
+                  "        let msg = res.message || res.error || JSON.stringify(res);",
+                  "        pm.expect(msg).to.include('transporte-service');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I6 Crear propuesta con transporte-service detenido (503 RN-04)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargas/{{cargaI6Id}}/propuestas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargas",
+                "{{cargaI6Id}}",
+                "propuestas"
+              ]
+            },
+            "description": "I6: [Requiere: docker compose stop transporte-service] Sin transporte-service, no se puede verificar RN-04: responde 503 y aborta sin crear propuesta.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenTransportista}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unidadId\": \"{{unidadId}}\",\n  \"retornoId\": \"{{retornoCaidaId}}\",\n  \"tipo\": \"CONTRAOFERTA\",\n  \"precio\": 395000.0,\n  \"mensaje\": \"Contraoferta con transporte detenido\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 503 Service Unavailable (falla cerrada)', function() {",
+                  "    pm.response.to.have.status(503);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "I7 Aceptar propuesta con transporte-service detenido (503)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cargas/propuestas/{{propuestaCaidaId}}/aceptacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cargas",
+                "propuestas",
+                "{{propuestaCaidaId}}",
+                "aceptacion"
+              ]
+            },
+            "description": "I7: [Requiere: docker compose stop transporte-service] Sin transporte-service, la aceptación aborta con 503 sin crear viaje ni modificar la propuesta.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenDador}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aceptoRiesgo\": false\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 503 Service Unavailable (falla cerrada)', function() {",
+                  "    pm.response.to.have.status(503);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "### 13 · Integraciones y fallos (I1 - I7)\nPruebas de contingencia de APIs externas (Georef, OpenRouteService) y escenarios de falla cerrada por caída de microservicios con transporte apagado.\n\n#### Importante para la ejecución:\n* Los escenarios **I1 a I4** y las solicitudes **I5-I7 Setup** se ejecutan con la infraestructura completa activa.\n* Para los escenarios **I5, I6 e I7**, se debe detener el contenedor de transporte:\n  ```bash\n  docker compose stop transporte-service\n  ```\n* Tras ejecutar I5, I6 e I7, se debe volver a iniciar el servicio:\n  ```bash\n  docker compose start transporte-service\n  ```\n\n#### Escenarios Demostrados:\n* **I1 (Georef):** Publicación de retorno con coordenadas explícitas sin invocar servicio de georreferenciación (201 Created).\n* **I2 (Georef):** Publicación con localidad inexistente y sin coordenadas responde 503 Service Unavailable sin inventar datos.\n* **I3 (OpenRouteService):** Contingencia de ruteo externo; retorno guardado con ruta en línea recta y `rutaAproximada: true`.\n* **I4 (OpenRouteService):** Búsqueda de cargas de paso sobre retorno en contingencia geográfica con ensanchamiento de corredor.\n* **I5 (Falla cerrada con transporte apagado):** Búsqueda de paso con `transporte-service` detenido responde 503 Service Unavailable.\n* **I6 (Falla cerrada con transporte apagado):** Creación de propuesta con `transporte-service` detenido responde 503 sin violar RN-04.\n* **I7 (Falla cerrada con transporte apagado):** Aceptación de propuesta con `transporte-service` detenido responde 503 sin crear viajes a medias.\n\n> Nota sobre I8 (Invalidación en vuelo): La transición de una propuesta a INVALIDADA por pérdida de habilitación de la unidad entre la propuesta y la aceptación se verifica en el test de integración automatizado AceptarPropuestaTest (conLaUnidadYaNoHabilitadaLaPropuestaQuedaInvalidada). En el entorno vivo, una unidad habilitada no puede volver a dictaminarse o rechazarse vía API una vez aprobada (regla N17 / 409 Conflict), y los vencimientos de documentación dependen del avance temporal del reloj (RN-05).\n\n#### Contenido:\n* `I1 Publicar retorno enviando coordenadas explícitas`: Publica retorno con coordenadas provistas.\n* `I2 Publicar retorno con localidad inexistente sin coordenadas`: Falla 503 con mensaje descriptivo.\n* `I3 Publicar retorno en contingencia de ruteo`: Publica retorno con `rutaAproximada = true`.\n* `I4 Búsqueda de cargas de paso en modo aproximado`: Consulta de cargas de paso con ensanchamiento de corredor.\n* `I5-I7 Setup Dador publica carga para prueba de caída`: Carga base para el escenario de caída.\n* `I5-I7 Setup Transportista postula propuesta previa a caída`: Propuesta base en estado `PENDIENTE`.\n* `I5-I7 Setup Dador publica carga limpia para fallo en propuesta (I6)`: Carga sin postulación previa.\n* `I5 Buscar cargas de paso con transporte-service detenido`: 503 Service Unavailable.\n* `I6 Crear propuesta con transporte-service detenido`: 503 Service Unavailable (RN-04).\n* `I7 Aceptar propuesta con transporte-service detenido`: 503 Service Unavailable."
     }
   ]
 }
