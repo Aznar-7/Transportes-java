@@ -42,6 +42,7 @@ Cada componente y aspecto de arquitectura cuenta con su propia documentación de
 | **Seguridad** | [docs/seguridad.md](docs/seguridad.md) | Configuración del realm de Keycloak, roles, estructura de tokens JWT y validación en dos capas (Gateway + microservicio). |
 | **Despliegue** | [docs/despliegue.md](docs/despliegue.md) | Guía paso a paso para levantar la solución con Docker Compose, variables de entorno (`.env`), perfiles y resolución de problemas. |
 | **Contrato Interno** | [docs/contrato-interno/transporte-interno.yml](docs/contrato-interno/transporte-interno.yml) | Especificación OpenAPI de los endpoints internos `/internal/**` para comunicación entre servicios. |
+| **Guía para la Defensa** | [docs/defensa.md](docs/defensa.md) | Decisiones clave de diseño, justificaciones de arquitectura y posibles preguntas de la mesa evaluadora. |
 
 ---
 
